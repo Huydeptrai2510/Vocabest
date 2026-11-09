@@ -1,7 +1,7 @@
 'use strict';
 // ===== CẤU HÌNH — chỉ dùng anon key (public). KHÔNG đặt service_role key ở đây. =====
-const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+const SUPABASE_URL = 'https://iocrhyizajbxnytdidsv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable__LFJQmvkmdZvxo_ILJY2uw_sz5pTOpr';
 // Miền định danh nội bộ, người dùng không bao giờ thấy. Phải khớp handle_new_user() trong database.sql.
 const INTERNAL_EMAIL_DOMAIN = 'users.vocabest.invalid';
 
