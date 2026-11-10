@@ -130,14 +130,14 @@
     <div id="lib-import-box" hidden>
       <form id="import-form" class="card" novalidate>
         <h3>Nhập hàng loạt</h3>
-        <label>Mỗi dòng một mục theo dạng A : B<textarea name="text" rows="6" placeholder="apple : táo&#10;break the ice : phá vỡ sự ngại ngùng"></textarea></label>
+        <label>Mỗi dòng một mục theo dạng A : B<textarea name="text" rows="6" placeholder="apple : táo&#10;break the ice : phá vỡ sự ngại ngùng&#10;big | large : to | lớn"></textarea><small>Từ đồng nghĩa ngăn cách bằng dấu |, ví dụ <b>big | large : to | lớn</b>. Khi gõ đáp án, nhập một trong các đáp án đồng nghĩa đều được tính đúng.</small></label>
         <p class="row"><button class="btn ghost" type="button" id="import-preview">Xem trước</button><button class="btn" type="submit" id="import-go" disabled>Nhập các dòng hợp lệ</button></p>
         <p class="msg" id="import-msg" role="alert"></p>
         <ul id="import-list" class="plain"></ul>
       </form>
       <form id="item-form" class="card" novalidate>
         <h3>Thêm một mục</h3>
-        <div class="row"><label>Vế A<input name="term" maxlength="100" required></label><label>Vế B<input name="meaning" maxlength="300" required></label></div>
+        <div class="row"><label>Vế A (đồng nghĩa: dùng |)<input name="term" maxlength="300" required></label><label>Vế B (đồng nghĩa: dùng |)<input name="meaning" maxlength="300" required></label></div>
         <p class="msg" id="item-msg" role="alert"></p><button class="btn" type="submit">Thêm mục</button>
       </form>
     </div>
