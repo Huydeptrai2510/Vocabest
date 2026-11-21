@@ -49,13 +49,14 @@ const IC = {
   login: '<path d="M14 4h5v16h-5M10 8l4 4-4 4M14 12H3"/>', logout: '<path d="M10 4H5v16h5M16 8l4 4-4 4M20 12H9"/>', userplus: '<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0114 0M19 8v6M16 11h6"/>',
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2 20a7 7 0 0114 0M16 4.5a3.5 3.5 0 010 7M22 20a6 6 0 00-4-5.6"/>', save: '<path d="M5 3h12l3 3v15H5zM8 3v6h8V3M8 21v-7h8v7"/>',
   upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>', refresh: '<path d="M20 11a8 8 0 10-2.3 5.7M20 4v7h-7"/>', arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
-  flag: '<path d="M5 21V4M5 4h13l-2 4 2 4H5"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>', chevron: '<path d="M6 9l6 6 6-6"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'
+  flag: '<path d="M5 21V4M5 4h13l-2 4 2 4H5"/>', stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>', chevron: '<path d="M6 9l6 6 6-6"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  volume: '<path d="M11 5L6 9H3v6h3l5 4V5zM15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/>'
 };
 const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
-const ICON_FOR = [[/^Xóa/, 'trash'], [/^Sửa/, 'edit'], [/^Mở khóa/, 'unlock'], [/^Khóa/, 'lock'], [/^Ẩn/, 'eyeoff'], [/^Mở lại|^Học lại/, 'refresh'], [/^Quản lý từ/, 'list'],
-  [/chi tiết|^Xem thư viện|^Xem trước|^Xem đáp án/i, 'eye'], [/^Học|^Bắt đầu/, 'play'], [/Admin/, 'shield'], [/^Chấp nhận|^Kiểm tra|^Đã nhớ|^Xác nhận/, 'check'],
+const ICON_FOR = [[/^Xóa/, 'trash'], [/^Sửa/, 'edit'], [/^Mở khóa/, 'unlock'], [/^Khóa/, 'lock'], [/^Ẩn/, 'eyeoff'], [/^Mở lại|^Học lại|^Làm lại/, 'refresh'], [/^Quản lý từ/, 'list'],
+  [/chi tiết|^Xem thư viện|^Xem trước|^Xem đáp án/i, 'eye'], [/^Học|^Bắt đầu|^Vào học/, 'play'], [/Admin/, 'shield'], [/^Chấp nhận|^Kiểm tra|^Đã nhớ|^Xác nhận/, 'check'],
   [/^Từ chối|^Đóng|^Chưa nhớ|^Hủy/, 'x'], [/^Đánh dấu|^Gửi báo cáo/, 'flag'], [/^Câu tiếp|^Xem kết quả/, 'arrow'], [/^Kết thúc/, 'stop'], [/^Xem tiến độ/, 'chart'],
-  [/^Đăng xuất/, 'logout'], [/^Đăng nhập/, 'login'], [/^Đăng ký|^Tạo tài khoản/, 'userplus'], [/^Lưu/, 'save'], [/^Nhập/, 'upload'], [/^Tạo|^Thêm/, 'plus'], [/^Vào bảng/, 'grid']];
+  [/^Đăng xuất/, 'logout'], [/^Đăng nhập/, 'login'], [/^Đăng ký|^Tạo tài khoản/, 'userplus'], [/^Lưu/, 'save'], [/^Nhập/, 'upload'], [/^Tạo|^Thêm/, 'plus'], [/^Vào bảng/, 'grid'], [/^Nghe/, 'volume']];
 function decorate(node, name) {
   if (node.querySelector('svg')) return;
   const label = node.textContent.trim(), ic = name || node.dataset.icon || (ICON_FOR.find(([re]) => re.test(label)) || [])[1];
@@ -69,8 +70,8 @@ function addMeta(m, ...items) { m.append(...items.map((x) => (typeof x === 'stri
 function dbHint(err) {
   if (!err) return '';
   const c = err.code || '', m = err.message || '', tech = ` (mã ${c || '?'}: ${m})`;
-  if (c === '23514' || /check constraint/i.test(m)) return 'Database chưa được cập nhật (ràng buộc chiều học). Hãy chạy lại toàn bộ database.sql trong Supabase.' + tech;
-  if (c === 'PGRST205' || c === '42P01' || /find the table|does not exist/i.test(m)) return 'Database chưa có bảng học tập. Hãy chạy toàn bộ database.sql trong Supabase.' + tech;
+  if (c === '23514' || /check constraint/i.test(m)) return 'Database chưa được cập nhật (ràng buộc dữ liệu). Hãy chạy lại toàn bộ database.sql trong Supabase.' + tech;
+  if (c === 'PGRST205' || c === '42P01' || /find the table|does not exist/i.test(m)) return 'Database chưa có bảng cần thiết. Hãy chạy toàn bộ database.sql trong Supabase.' + tech;
   if (c === 'PGRST204' || c === '42703' || /column/i.test(m)) return 'Database thiếu cột mới. Hãy chạy lại toàn bộ database.sql trong Supabase.' + tech;
   if (c === '42501' || /row-level security|permission denied/i.test(m)) return 'Bị chặn bởi quyền truy cập: tài khoản đang bị khóa, thư viện chưa đủ 8 mục, hoặc database chưa cập nhật.' + tech;
   return 'Lỗi từ máy chủ.' + tech;
@@ -130,13 +131,26 @@ function enhanceSelect(sel) {
   sync();
 }
 
+// Vừa khung: chữ tràn khung thì tự thu nhỏ (khung phải có kích thước cố định, overflow ẩn).
+function fit(frame, min = 11) {
+  if (!frame.clientHeight) return;
+  const t = frame.querySelector('.fit') || frame;
+  t.style.fontSize = '';
+  let size = parseFloat(getComputedStyle(t).fontSize);
+  const over = () => frame.scrollHeight > frame.clientHeight + 1 || frame.scrollWidth > frame.clientWidth + 1;
+  while (over() && size > min) { size -= 1; t.style.fontSize = size + 'px'; }
+}
+const fitAll = () => document.querySelectorAll('.fitbox, .lib h4, #g-prompt').forEach((n) => fit(n));
+let fitRaf = 0;
+const scheduleFit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitAll); };
+
 // ===== Định tuyến =====
 const PROTECTED = ['dashboard', 'settings', 'library', 'admin', 'libraries', 'study', 'progress'], GUEST = ['login', 'register'];
 function route() {
   let v = location.hash.replace(/^#\/?/, '') || 'home';
   if (!['home', ...PROTECTED, ...GUEST].includes(v)) v = 'home';
   if (PROTECTED.includes(v) && !state.user) { location.hash = '#/login'; return; }
-  if (GUEST.includes(v) && state.user) { location.hash = '#/dashboard'; return; }
+  if ((GUEST.includes(v) || v === 'home') && state.user) { location.hash = '#/study'; return; }
   if (G && !G.over && v !== 'study') finishGame();
   if (v === 'admin' && !isStaff()) { location.hash = '#/dashboard'; return; }
   document.querySelectorAll('[data-view]').forEach((s) => { s.hidden = s.dataset.view !== v; });
@@ -144,13 +158,23 @@ function route() {
   $('#config-warning').hidden = configured;
   $('#nav-admin').hidden = !(state.user && isStaff());
   document.querySelectorAll('nav a').forEach((a) => { if (a.getAttribute('href') === '#/' + v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  scrollTo(0, 0);
   if (v === 'dashboard') renderDashboard();
   if (v === 'library') renderLibrary();
   if (v === 'admin') renderAdmin();
   if (v === 'libraries') renderLibraries();
   if (v === 'study') renderStudy();
   if (v === 'progress') renderProgress();
-  if (v === 'settings') { $('#set-name').textContent = state.username; $('#set-role').textContent = ROLE_LABEL[state.role] || ROLE_LABEL.user; }
+  if (v === 'settings') { $('#set-name').textContent = state.username; $('#set-role').textContent = ROLE_LABEL[state.role] || ROLE_LABEL.user; renderInstall(); }
+}
+// Gợi ý cài lên màn hình chính (iOS không có nút cài đặt riêng).
+function renderInstall() {
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  $('#install-card').hidden = standalone || !(ios || navigator.maxTouchPoints > 0);
+  $('#install-text').textContent = ios
+    ? 'Mở trang này bằng Safari, bấm nút Chia sẻ rồi chọn “Thêm vào Màn hình chính” để dùng toàn màn hình, có biểu tượng riêng.'
+    : 'Mở menu của trình duyệt và chọn “Thêm vào màn hình chính” để dùng như một ứng dụng.';
 }
 
 async function loadProfile() {
@@ -207,8 +231,8 @@ async function onPassword(e) {
 async function renderDashboard() {
   $('#dash-name').textContent = state.username;
   $('#locked-note').hidden = state.status !== 'locked';
+  await loadTags(); tagPicker($('#tag-pick-new'), []);
   $('#lib-form').querySelectorAll('input,textarea,select,button').forEach((c) => { c.disabled = state.status === 'locked'; });
-  await fillTags($('#tag-select'));
   await loadLibraries();
 }
 let libSeq = 0;
@@ -216,19 +240,21 @@ async function loadLibraries() {
   const list = $('#lib-list'), load = $('#lib-loading'), empty = $('#lib-empty');
   const my = ++libSeq; load.hidden = false; empty.hidden = true;
   const { data, error } = await sb.from('libraries')
-    .select('id,title,description,visibility,tag:tags(name,color)')
+    .select('id,title,description,visibility,tags:library_tags(tag:tags(id,name,color)),items:library_items(count)')
     .eq('owner_id', state.user.id).eq('source', 'personal').order('created_at', { ascending: false });
   if (my !== libSeq) return;
   load.hidden = true;
   if (error) { toast('Không tải được thư viện.'); return; }
-  empty.hidden = data.length > 0; list.replaceChildren();
+  empty.hidden = data.length > 0; if (!data.length) $('#lib-create').open = true; list.replaceChildren();
   data.forEach((l) => {
     const card = document.createElement('article'); card.className = 'lib';
     const h = document.createElement('h4'); h.textContent = l.title;
     const d = document.createElement('p'); d.textContent = l.description || 'Chưa có mô tả.';
     const meta = document.createElement('div'); meta.className = 'meta';
-    addMeta(meta, l.visibility === 'public' ? 'Công khai' : 'Riêng tư');
-    if (l.tag) { const t = document.createElement('span'); t.className = 'tag'; t.textContent = l.tag.name; t.style.background = l.tag.color; addMeta(meta, t); }
+    const cnt = l.items && l.items[0] ? l.items[0].count : 0;
+    addMeta(meta, `${cnt} mục`, l.visibility === 'public' ? 'Công khai' : 'Riêng tư');
+    if (cnt < MIN_ITEMS) addMeta(meta, 'Bản nháp');
+    tagsOf(l).forEach((t) => addMeta(meta, tagChip(t)));
     const del = document.createElement('button'); del.className = 'del'; del.type = 'button'; del.textContent = 'Xóa thư viện';
     del.disabled = state.status === 'locked';
     del.addEventListener('click', async () => {
@@ -246,15 +272,16 @@ async function onCreateLibrary(e) {
   const f = e.target, out = $('#lib-msg'), title = f.title.value.trim();
   if (!title) return say(out, 'Hãy nhập tên thư viện.');
   busy(f, true);
-  const { error } = await sb.from('libraries').insert({
-    owner_id: state.user.id, source: 'personal', title, description: f.description.value.trim(),
-    visibility: 'private', tag_id: f.tag_id.value || null });
+  const { data, error } = await sb.from('libraries').insert({
+    owner_id: state.user.id, source: 'personal', title, description: f.description.value.trim(), visibility: 'private' }).select('id').single();
+  const tagErr = error ? null : await saveLibTags(data.id, $('#tag-pick-new')._get(), []);
   busy(f, false);
   if (error) return say(out, 'Không tạo được thư viện. Tài khoản có thể đang bị khóa.');
-  f.reset(); say(out, ''); toast('Đã tạo thư viện.'); loadLibraries();
+  f.reset(); tagPicker($('#tag-pick-new'), []); say(out, ''); $('#lib-create').open = false;
+  toast(tagErr ? 'Đã tạo thư viện nhưng chưa gắn được thẻ.' : 'Đã tạo thư viện.'); loadLibraries();
 }
 
-// ===== Thư viện & từ vựng (định dạng A : B) =====
+// ===== Thư viện & từ vựng (định dạng A : B, vế A tiếng Anh, vế B tiếng Việt) =====
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text != null) n.textContent = text; if (cls) n.className = cls; return n; };
 const btn = (text, fn, cls = 'btn small ghost') => { const b = el('button', text, cls); b.type = 'button'; b.addEventListener('click', fn); if (/\b(btn|del)\b/.test(cls)) decorate(b); return b; };
 const clean = (v) => String(v || '').trim().replace(/\s+/g, ' ');
@@ -266,16 +293,43 @@ const variants = (v) => {
 const normItem = (v) => variants(v).join(' | '), showV = (v) => variants(v).join(' / ');
 const variantsOk = (v) => v.split(' | ').every((x) => /[\p{L}\p{N}]/u.test(x));
 const keyOf = (a, b) => (normItem(a) + '\u0001' + normItem(b)).toLowerCase();
-const MIN_ITEMS = 8, SRC_LABEL = { personal: 'Cá nhân', system: 'Hệ thống', community: 'Cộng đồng' };
+const MIN_ITEMS = 8, MAX_TAGS = 3, SRC_LABEL = { personal: 'Cá nhân', system: 'Hệ thống', community: 'Cộng đồng' };
 let current = null, curLib = null, curItems = [], tagCache = null, previewRows = [], studyFrom = null;
 const fmt = (sec) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
-const hasText = (v) => /[\p{L}\p{N}]/u.test(v);
-function resetTags() { tagCache = null; ['#browse-tag', '#edit-tag', '#tag-select'].forEach((q) => { $(q).length = 1; }); }
+
+// Thẻ: một thư viện gắn tối đa MAX_TAGS thẻ (bảng library_tags, giới hạn cũng được chặn ở database).
+async function loadTags() {
+  if (!tagCache) { const { data } = await sb.from('tags').select('id,name,color').order('name'); tagCache = data || []; }
+  return tagCache;
+}
+function resetTags() { tagCache = null; $('#browse-tag').length = 1; }
 async function fillTags(sel) {
-  if (!tagCache) { const { data } = await sb.from('tags').select('id,name').order('name'); tagCache = data || []; }
+  await loadTags();
   if (sel.options.length <= 1) tagCache.forEach((t) => sel.append(new Option(t.name, t.id)));
 }
+const tagsOf = (l) => (l.tags || []).map((x) => x.tag).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name));
 function tagChip(t) { const c = el('span', t.name, 'tag'); c.style.background = t.color; return c; }
+function tagPicker(box, selected) {
+  box.querySelectorAll('label,small').forEach((n) => n.remove());
+  const set = new Set(selected || []), note = el('small');
+  const sync = () => {
+    box.querySelectorAll('input').forEach((i) => { i.disabled = !i.checked && set.size >= MAX_TAGS; });
+    note.textContent = `Đã chọn ${set.size}/${MAX_TAGS}`;
+  };
+  (tagCache || []).forEach((t) => {
+    const l = el('label'), c = document.createElement('input'), dot = el('i', null, 'dot');
+    c.type = 'checkbox'; c.value = t.id; c.checked = set.has(t.id); dot.style.background = t.color;
+    c.addEventListener('change', () => { if (c.checked) set.add(t.id); else set.delete(t.id); sync(); });
+    l.append(c, dot, el('span', t.name)); box.append(l);
+  });
+  box.append(note); box._get = () => [...set]; sync();
+}
+async function saveLibTags(libId, want, have) {
+  const del = have.filter((t) => !want.includes(t)), add = want.filter((t) => !have.includes(t));
+  if (del.length) { const r = await sb.from('library_tags').delete().eq('library_id', libId).in('tag_id', del); if (r.error) return r.error; }
+  if (add.length) { const r = await sb.from('library_tags').insert(add.map((tag_id) => ({ library_id: libId, tag_id }))); if (r.error) return r.error; }
+  return null;
+}
 function openLibrary(id, title) { current = { id, title }; location.hash = '#/library'; }
 
 function parseLines(text, existing) {
@@ -299,23 +353,22 @@ function parseLines(text, existing) {
 async function renderLibrary() {
   if (!current) { location.hash = '#/dashboard'; return; }
   const [lr, ir] = await Promise.all([
-    sb.from('libraries').select('id,title,description,visibility,source,owner_id,tag_id,moderation,tag:tags(name,color)').eq('id', current.id).single(),
+    sb.from('libraries').select('id,title,description,visibility,source,owner_id,moderation,tags:library_tags(tag:tags(id,name,color))').eq('id', current.id).single(),
     sb.from('library_items').select('id,term,meaning').eq('library_id', current.id).order('position').order('created_at')]);
   if (lr.error || ir.error) { toast('Không tải được thư viện.'); location.hash = '#/libraries'; return; }
-  curLib = lr.data; curItems = ir.data; current.title = curLib.title;
+  curLib = lr.data; curLib.tagList = tagsOf(curLib); curItems = ir.data; current.title = curLib.title;
   const mine = curLib.owner_id === state.user.id && curLib.source !== 'system';
   const editable = (mine && curLib.moderation !== 'locked') || (curLib.source === 'system' && state.role === 'boss');
   const n = curItems.length, ready = n >= MIN_ITEMS;
   $('#lib-title').textContent = curLib.title; $('#lib-desc').textContent = curLib.description || '';
   $('#lib-stats').textContent = `${n} mục, ${SRC_LABEL[curLib.source]}, ${curLib.visibility === 'public' ? 'công khai' : 'riêng tư'}` + (mine && MOD_NOTE[curLib.moderation] ? '. ' + MOD_NOTE[curLib.moderation] : '');
-  const tg = $('#lib-tag'); tg.hidden = !curLib.tag;
-  if (curLib.tag) { tg.textContent = curLib.tag.name; tg.style.background = curLib.tag.color; }
+  $('#lib-tags').replaceChildren(...curLib.tagList.map(tagChip));
   $('#lib-study').disabled = !ready;
   $('#lib-study-note').textContent = ready ? '' : `Bản nháp: cần tối thiểu ${MIN_ITEMS} mục để học hoặc công khai (còn thiếu ${MIN_ITEMS - n}).`;
   $('#lib-edit').hidden = !editable; $('#lib-import-box').hidden = !editable;
   if (editable) {
-    const f = $('#lib-edit').elements; await fillTags($('#edit-tag'));
-    f.title.value = curLib.title; f.description.value = curLib.description || ''; f.visibility.value = curLib.visibility; f.tag_id.value = curLib.tag_id || '';
+    const f = $('#lib-edit').elements; await loadTags(); tagPicker($('#tag-pick-edit'), curLib.tagList.map((t) => t.id));
+    f.title.value = curLib.title; f.description.value = curLib.description || ''; f.visibility.value = curLib.visibility;
   }
   const list = $('#item-list'); list.replaceChildren(); $('#item-empty').hidden = n > 0;
   curItems.forEach((it) => {
@@ -334,9 +387,11 @@ async function onSaveLibrary(e) {
   const f = e.target, x = f.elements, out = $('#edit-msg'), title = clean(x.title.value);
   if (!title) return say(out, 'Hãy nhập tên thư viện.');
   busy(f, true);
-  const { error } = await sb.from('libraries').update({ title, description: x.description.value.trim(), visibility: x.visibility.value, tag_id: x.tag_id.value || null }).eq('id', curLib.id);
+  const { error } = await sb.from('libraries').update({ title, description: x.description.value.trim(), visibility: x.visibility.value }).eq('id', curLib.id);
+  const tagErr = error ? null : await saveLibTags(curLib.id, $('#tag-pick-edit')._get(), curLib.tagList.map((t) => t.id));
   busy(f, false);
   if (error) return say(out, /8 mục/.test(error.message) ? `Cần tối thiểu ${MIN_ITEMS} mục từ để công khai thư viện.` : 'Không lưu được thay đổi.');
+  if (tagErr) { renderLibrary(); return say(out, `Đã lưu thông tin nhưng chưa gắn được thẻ (tối đa ${MAX_TAGS} thẻ). Hãy chạy lại database.sql nếu lỗi lặp lại.`); }
   say(out, ''); toast('Đã lưu thư viện.'); renderLibrary();
 }
 function onImportPreview() {
@@ -373,14 +428,19 @@ async function onAddItem(e) {
 // ===== Danh sách / khám phá thư viện =====
 let browseTab = 'mine';
 async function fetchLibs(tab, text, tag) {
-  let q = sb.from('libraries').select('id,title,description,visibility,source,tag:tags(name,color),items:library_items(count)');
+  let q = sb.from('libraries').select('id,title,description,visibility,source,tags:library_tags(tag:tags(id,name,color)),items:library_items(count)');
   if (tab === 'mine') q = q.eq('owner_id', state.user.id).neq('source', 'system');
   else if (tab === 'system') q = q.eq('source', 'system').eq('visibility', 'public').in('moderation', ['ok', 'reported']);
   else q = q.eq('visibility', 'public').neq('source', 'system').neq('owner_id', state.user.id).in('moderation', ['ok', 'reported']);
   if (text) q = q.ilike('title', `%${text.replace(/[%_,()]/g, ' ')}%`);
-  if (tag) q = q.eq('tag_id', tag);
+  if (tag) {
+    const r = await sb.from('library_tags').select('library_id').eq('tag_id', tag).limit(1000);
+    if (r.error) return null;
+    if (!r.data.length) return [];
+    q = q.in('id', r.data.map((x) => x.library_id));
+  }
   const { data, error } = await q.order('created_at', { ascending: false }).limit(60);
-  return error ? null : data.map((l) => ({ ...l, n: l.items && l.items[0] ? l.items[0].count : 0 }));
+  return error ? null : data.map((l) => ({ ...l, tags: tagsOf(l), n: l.items && l.items[0] ? l.items[0].count : 0 }));
 }
 let browseSeq = 0;
 const MOD_LABEL = { ok: 'Công khai', reported: 'Có báo cáo', hidden: 'Đã ẩn', locked: 'Đã khóa' };
@@ -396,17 +456,17 @@ async function renderLibraries() {
   let rows;
   if (browseTab === 'community') {
     const { data, error } = await sb.rpc('community_libraries', { q: text, tagid: tag || null, sortby: $('#browse-sort').value, lim: 60 });
-    rows = error ? null : data.map((l) => ({ id: l.id, title: l.title, description: l.description, n: l.items, tag: l.tag_name ? { name: l.tag_name, color: l.tag_color } : null, author: l.author, avg: l.avg_rating, cnt: l.rating_count, learners: l.learners }));
+    rows = error ? null : data.map((l) => ({ id: l.id, title: l.title, description: l.description, n: l.items, tags: l.tags || [], author: l.author, avg: l.avg_rating, cnt: l.rating_count, learners: l.learners }));
   } else rows = await fetchLibs(browseTab, text, tag);
   if (my !== browseSeq) return;
   $('#browse-loading').hidden = true;
   if (!rows) return toast('Không tải được danh sách thư viện.');
   const empty = $('#browse-empty'); empty.hidden = rows.length > 0;
-  empty.textContent = browseTab === 'mine' ? 'Bạn chưa có thư viện nào khớp. Tạo thư viện ở Bảng điều khiển.' : 'Chưa có thư viện công khai nào khớp bộ lọc.';
+  empty.textContent = browseTab === 'mine' ? 'Bạn chưa có thư viện nào khớp. Tạo thư viện ở mục Của tôi.' : 'Chưa có thư viện công khai nào khớp bộ lọc.';
   list.replaceChildren();
   rows.forEach((l) => {
     const c = el('article', null, 'lib'), meta = el('div', null, 'meta');
-    addMeta(meta, `${l.n} mục`); if (l.tag) addMeta(meta, tagChip(l.tag));
+    addMeta(meta, `${l.n} mục`); (l.tags || []).forEach((t) => addMeta(meta, tagChip(t)));
     if (l.author) addMeta(meta, `Tác giả: ${l.author}`, l.cnt ? `★ ${Number(l.avg).toFixed(1)} (${l.cnt})` : 'Chưa có đánh giá', `${l.learners} người học`);
     if (browseTab === 'mine' && l.n < MIN_ITEMS) addMeta(meta, 'Bản nháp');
     c.append(el('h4', l.title), el('p', l.description || 'Chưa có mô tả.'), meta, btn('Xem chi tiết', () => openLibrary(l.id, l.title)));
@@ -461,28 +521,62 @@ async function renderMod() {
 let G = null;
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const norm = (v) => clean(v).toLowerCase();
-const normWord = (v) => norm(v).replace(/^[.,;:!?"']+|[.,;:!?"']+$/g, '');
 const PV = (it) => (G.dir === 'en_vi' ? it.tv : it.mv), AV = (it) => (G.dir === 'en_vi' ? it.mv : it.tv);
 const P = (it) => PV(it).join(' / '), A = (it) => AV(it).join(' / ');
 const pick1 = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const isAns = (it, v) => AV(it).some((x) => norm(x) === norm(v));
 const overlaps = (a, b) => AV(a).some((v) => isAns(b, v));
-const TYPE_LABEL = { flashcard: 'Flashcard', mcq: 'Trắc nghiệm', type: 'Nhập đáp án', match: 'Ghép cặp', fill: 'Điền vào chỗ trống' };
+const isAlnum = (c) => /[\p{L}\p{N}]/u.test(c);
+const isAscii = (s) => /^[\x20-\x7E]+$/.test(s);
+const ENG = new Set(['type', 'fill', 'order', 'count', 'listen']); // trả lời bằng tiếng Anh: luôn hỏi chiều Việt → Anh
+const TYPE_LABEL = { flashcard: 'Flashcard', mcq: 'Trắc nghiệm', type: 'Nhập đáp án', match: 'Ghép cặp', fill: 'Điền chỗ trống', order: 'Sắp xếp', count: 'Đếm ký tự thay thế', listen: 'Nghe và nhập' };
+const SUB = { type: 'Gõ nghĩa tiếng Anh của từ này.', fill: 'Điền ký tự còn thiếu, mỗi ô một ký tự tiếng Anh.', order: 'Chạm các mảnh theo thứ tự để ghép thành từ tiếng Anh.', count: 'Có bao nhiêu ký tự đã bị thay thế?', listen: 'Nghe và gõ lại từ tiếng Anh.' };
+
+// Giọng đọc miễn phí của trình duyệt (Web Speech API)
+const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+let voiceEn = null;
+function pickVoice() { const v = speechSynthesis.getVoices(); voiceEn = v.find((x) => /^en[-_]US/i.test(x.lang)) || v.find((x) => /^en/i.test(x.lang)) || null; }
+if (canSpeak) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text, rate = 0.9) {
+  if (!canSpeak || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text); u.lang = 'en-US'; u.rate = rate; if (voiceEn) u.voice = voiceEn;
+  speechSynthesis.speak(u);
+}
+
+// Ghi nhớ lựa chọn gần nhất (chỉ là tiện lợi, không quan trọng nếu bị chặn)
+const PREF_KEY = 'vocabest.study';
+let prefLib = null;
+const loadPrefs = () => { try { return JSON.parse(localStorage.getItem(PREF_KEY)) || null; } catch (e) { return null; } };
+const savePrefs = (p) => { try { localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch (e) { /* bỏ qua */ } };
+function applyPrefs() {
+  const p = loadPrefs(); if (!p) return;
+  if (p.src) $('#st-src').value = p.src;
+  if (p.mode) { $('#st-mode').value = p.mode; onModeChange(); if (p.num) $('#st-num').value = p.num; }
+  if (Array.isArray(p.types)) document.querySelectorAll('#st-types input').forEach((i) => { i.checked = p.types.includes(i.value); });
+  prefLib = p.lib || null;
+}
+
 function studyFromLib() { studyFrom = { id: curLib.id, src: curLib.source === 'system' ? 'system' : curLib.owner_id === state.user.id ? 'mine' : 'community' }; location.hash = '#/study'; }
 function showPanel(p) { $('#study-setup').hidden = p !== 'setup'; $('#study-play').hidden = p !== 'play'; $('#study-result').hidden = p !== 'result'; }
+let stSeq = 0;
 async function loadStudyLibs() {
-  const sel = $('#st-lib'); sel.replaceChildren(new Option('Đang tải…', ''));
+  const my = ++stSeq, sel = $('#st-lib'); say($('#st-msg'), ''); sel.replaceChildren(new Option('Đang tải…', ''));
   const rows = await fetchLibs($('#st-src').value, '', '');
+  if (my !== stSeq) return;
   sel.replaceChildren();
   if (!rows || !rows.length) { sel.append(new Option('Chưa có thư viện nào', '')); return; }
   rows.forEach((l) => { const o = new Option(`${l.title} (${l.n} mục${l.n < MIN_ITEMS ? ', bản nháp' : ''})`, l.id); o.disabled = l.n < MIN_ITEMS; sel.append(o); });
   const first = [...sel.options].find((o) => !o.disabled); sel.value = first ? first.value : '';
+  if (prefLib && [...sel.options].some((o) => o.value === prefLib && !o.disabled)) sel.value = prefLib;
+  prefLib = null;
   if (!first) say($('#st-msg'), `Chưa có thư viện nào đủ ${MIN_ITEMS} mục để học trong nguồn này.`);
 }
 async function renderStudy() {
   if (G && !G.over) return showPanel('play');
-  showPanel('setup'); say($('#st-msg'), '');
-  if (studyFrom) { $('#st-src').value = studyFrom.src; await loadStudyLibs(); $('#st-lib').value = studyFrom.id; studyFrom = null; }
+  showPanel('setup'); say($('#st-msg'), ''); applyPrefs();
+  if (!canSpeak) { const i = document.querySelector('#st-types input[value=listen]'); i.checked = false; i.disabled = true; i.parentNode.title = 'Trình duyệt này chưa hỗ trợ giọng đọc'; }
+  if (studyFrom) { $('#st-src').value = studyFrom.src; prefLib = null; await loadStudyLibs(); $('#st-lib').value = studyFrom.id; studyFrom = null; }
   else await loadStudyLibs();
 }
 function onModeChange() {
@@ -493,7 +587,7 @@ function onModeChange() {
 async function startGame(e) {
   e.preventDefault();
   const out = $('#st-msg'), libId = $('#st-lib').value, mode = $('#st-mode').value, num = parseInt($('#st-num').value, 10);
-  const types = [...document.querySelectorAll('#st-types input:checked')].map((i) => i.value);
+  const types = [...document.querySelectorAll('#st-types input:checked')].map((i) => i.value).filter((t) => t !== 'listen' || canSpeak);
   if (!libId) return say(out, 'Hãy chọn nguồn và thư viện cụ thể.');
   if (!types.length) return say(out, 'Hãy chọn ít nhất một dạng câu hỏi.');
   const lo = mode === 'speed' ? 10 : 1, hi = mode === 'speed' ? 3600 : 100;
@@ -504,6 +598,7 @@ async function startGame(e) {
   const r = await sb.from('study_sessions').insert({ library_id: libId, mode, direction: 'mixed', planned_count: mode === 'classic' ? num : null, planned_seconds: mode === 'speed' ? num : null }).select('id').single();
   busy(e.target, false);
   if (r.error) return say(out, 'Không bắt đầu được phiên học. ' + dbHint(r.error));
+  savePrefs({ src: $('#st-src').value, lib: libId, mode, num, types });
   G = { sid: r.data.id, items: items.map((i) => ({ ...i, term: clean(i.term), meaning: clean(i.meaning), tv: variants(i.term), mv: variants(i.meaning) })), mode, dir: 'en_vi', types, flashOnly: types.length === 1 && types[0] === 'flashcard', flash: 0, missed: new Set(), limit: num, done: 0, correct: 0, bag: [], pending: [], failed: false, t0: Date.now(), over: false, q: null };
   say(out, ''); showPanel('play'); G.timer = setInterval(tick, 250); tick(); nextQuestion();
 }
@@ -521,31 +616,58 @@ function nextItem() { if (!G.bag.length) G.bag = shuffle(G.items); return G.bag.
 function build(t, it) {
   const others = G.items.filter((x) => x.id !== it.id && !overlaps(it, x));
   if (t === 'flashcard' || t === 'type') return { t, item: it };
+  if (t === 'listen') return canSpeak ? { t, item: it, say: pick1(it.tv) } : null;
   if (t === 'mcq') {
     const pool = []; shuffle(others).forEach((x) => { if (!pool.some((u) => overlaps(u, x))) pool.push(x); });
     const right = pick1(AV(it)), wc = (v) => v.split(' ').length;
     const d = pool.sort((a, b) => Math.abs(wc(AV(a)[0]) - wc(right)) - Math.abs(wc(AV(b)[0]) - wc(right))).slice(0, 3);
     return d.length < 3 ? null : { t, item: it, options: shuffle([right, ...d.map((x) => pick1(AV(x)))]) };
   }
-  if (t === 'fill') {
-    const words = pick1(AV(it)).split(' '), cores = words.map(normWord); let pos = -1;
-    cores.forEach((c, i) => { if (c && (pos < 0 || c.length > cores[pos].length)) pos = i; });
-    return pos < 0 ? null : { t, item: it, words, pos };
-  }
   if (t === 'match') {
     const set = [it]; shuffle(others).forEach((x) => { if (set.length < 4 && !set.some((u) => overlaps(u, x))) set.push(x); });
     return set.length < 4 ? null : { t, item: it, set, shown: set.map((x) => pick1(AV(x))) };
+  }
+  // Ba dạng dưới đây luôn làm việc trên từ tiếng Anh (G.dir = 'vi_en').
+  const word = pick1(it.tv), cs = [...word], idx = cs.map((c, i) => (isAlnum(c) ? i : -1)).filter((i) => i >= 0);
+  if (t === 'fill') {
+    if (idx.length < 3) return null;
+    const want = idx.length >= 6 && Math.random() < 0.5 ? 2 : 1, blanks = [];
+    shuffle(idx).forEach((i) => { if (blanks.length < want && blanks.every((b) => Math.abs(b - i) > 1)) blanks.push(i); });
+    return { t, item: it, word, chars: cs, blanks: blanks.sort((a, b) => a - b) };
+  }
+  if (t === 'order') {
+    const words = word.includes(' '), parts = words ? word.split(' ').filter(Boolean) : cs;
+    if (parts.length < 2) return null;
+    const tiles = parts.map((text, id) => ({ id, text })), same = (o) => o.every((x, i) => x.text === parts[i]);
+    let out = shuffle(tiles), k = 0; while (same(out) && k++ < 8) out = shuffle(tiles);
+    return same(out) ? null : { t, item: it, word, words, tiles: out };
+  }
+  if (t === 'count') {
+    if (idx.length < 3) return null;
+    const n = Math.random() < 0.12 ? 0 : 1 + Math.floor(Math.random() * Math.min(4, idx.length - 1)), out = cs.slice();
+    shuffle(idx).slice(0, n).forEach((i) => {
+      const o = cs[i], pool = /\d/.test(o) ? '0123456789' : 'abcdefghijklmnopqrstuvwxyz';
+      let r; do { r = pool[Math.floor(Math.random() * pool.length)]; } while (r === o.toLowerCase());
+      out[i] = o !== o.toLowerCase() ? r.toUpperCase() : r;
+    });
+    return { t, item: it, word, n, shown: out.join('') };
   }
   return null;
 }
 function nextQuestion() {
   if (!G || G.over) return;
-  clearTimeout(G.auto);
+  clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
   if (G.mode === 'classic' && G.done >= G.limit) return finishGame();
-  G.dir = Math.random() < 0.5 ? 'en_vi' : 'vi_en';
-  const it = nextItem(); let q = null;
-  for (const t of shuffle(G.types)) { q = build(t, it); if (q) break; }
-  G.q = q || build('flashcard', it); renderQ(G.q);
+  let it = null, q = null;
+  for (let k = 0; k < 8 && !q; k++) {
+    it = nextItem();
+    for (const t of shuffle(G.types)) {
+      G.dir = ENG.has(t) ? 'vi_en' : Math.random() < 0.5 ? 'en_vi' : 'vi_en';
+      q = build(t, it); if (q) break;
+    }
+  }
+  if (!q) { G.dir = Math.random() < 0.5 ? 'en_vi' : 'vi_en'; q = build('flashcard', it); }
+  G.q = q; renderQ(q);
 }
 function record(q, it, answer, extra = {}) {
   G.pending.push(sb.from('study_attempts').insert({ session_id: G.sid, item_id: it.id, qtype: q.t, direction: G.dir, answer: answer == null ? null : String(answer).slice(0, 400), ...extra }).then((r) => { if (r.error) { G.failed = true; G.err = G.err || r.error; } }));
@@ -564,63 +686,161 @@ function settleFlash(ok, it) {
   if (G.mode === 'speed') G.auto = setTimeout(nextQuestion, 500);
   else { setBtn($('#g-next'), G.flashOnly && G.done >= G.limit ? 'Xem kết quả' : 'Câu tiếp'); $('#g-next').hidden = false; $('#g-next').focus(); }
 }
-function askText(q, body, check, extra, wrongMsg) {
-  const inp = el('input'); inp.autocomplete = 'off'; inp.autocapitalize = 'none'; inp.setAttribute('aria-label', 'Câu trả lời');
+
+// Nút trong khung kích thước cố định: chữ dài tự thu nhỏ (xem fit()).
+function optBtn(text, fn, cls = '') {
+  const b = el('button', null, ('opt fitbox ' + cls).trim()); b.type = 'button'; b.dataset.v = text;
+  b.append(el('span', text, 'fit')); b.addEventListener('click', fn); return b;
+}
+// Ô nhập chỉ nhận ký tự tiếng Anh (ASCII) nếu đáp án là tiếng Anh thuần.
+function engInput(strict) {
+  const inp = el('input'), clamp = () => { if (strict) inp.value = inp.value.replace(/[^\x20-\x7E]/g, ''); };
+  inp.autocomplete = 'off'; inp.autocapitalize = 'none'; inp.spellcheck = false; inp.lang = 'en'; inp.placeholder = 'Nhập bằng tiếng Anh';
+  inp.setAttribute('autocorrect', 'off'); inp.setAttribute('aria-label', 'Câu trả lời');
+  inp.addEventListener('input', (ev) => { if (!ev.isComposing) clamp(); });
+  inp.addEventListener('compositionend', clamp);
+  return inp;
+}
+function askText(q, body, wrongMsg, focus = true) {
+  const it = q.item, inp = engInput(AV(it).every(isAscii));
   const go = btn('Kiểm tra', () => {
     const v = inp.value; if (!clean(v)) return inp.focus();
     inp.disabled = true; go.disabled = true;
-    const ok = check(v); record(q, q.item, v, extra); settle(ok, ok ? 'Đúng!' : wrongMsg);
+    const ok = isAns(it, v); record(q, it, v); settle(ok, ok ? 'Đúng!' : wrongMsg);
   }, 'btn');
-  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go.click(); } });
-  body.append(inp, el('p'), go); inp.focus();
+  inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); go.click(); } });
+  body.append(inp, go); if (focus) inp.focus();
 }
-function renderQ(q) {
-  const body = $('#g-body'), it = q.item; body.replaceChildren();
-  $('#g-fb').textContent = ''; $('#g-fb').className = 'msg'; $('#g-next').hidden = true; $('#g-type').textContent = TYPE_LABEL[q.t] + (q.t === 'flashcard' ? ' (không tính điểm)' : '') + ' · ' + (G.dir === 'en_vi' ? 'Anh → Việt' : 'Việt → Anh');
-  $('#g-prompt').textContent = q.t === 'match' ? 'Ghép mỗi mục với nghĩa tương ứng' : P(it);
-  if (q.t === 'flashcard') {
-    const show = btn('Xem đáp án', () => {
-      show.remove(); body.append(el('p', A(it), 'reveal'));
-      const rate = (ok) => { record(q, it, null, { self_correct: ok }); settleFlash(ok, it); [...body.querySelectorAll('button')].forEach((b) => { b.disabled = true; }); };
-      const r = el('p', null, 'row'); r.append(btn('Chưa nhớ', () => rate(false), 'btn ghost'), btn('Đã nhớ', () => rate(true), 'btn')); body.append(r);
-    }, 'btn'); body.append(show);
-  } else if (q.t === 'mcq') {
-    const grid = el('div', null, 'opts'); body.append(grid);
-    q.options.forEach((o) => grid.append(btn(o, (ev) => {
-      const ok = isAns(it, o);
-      body.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (isAns(it, x.textContent)) x.classList.add('ok'); });
-      if (!ok) ev.currentTarget.classList.add('bad');
-      record(q, it, o); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + A(it));
-    }, 'opt')));
-  } else if (q.t === 'type') {
-    if (AV(it).length > 1) body.append(el('p', 'Có nhiều đáp án đồng nghĩa, chỉ cần nhập một trong số đó.', 'muted'));
-    askText(q, body, (v) => isAns(it, v), {}, 'Chưa đúng. Đáp án: ' + A(it));
-  } else if (q.t === 'fill') {
-    const shown = q.words.map((w, i) => (i === q.pos ? '_____' : w)).join(' ');
-    body.append(el('p', shown, 'reveal'), el('p', 'Điền phần bị ẩn:', 'muted'));
-    askText(q, body, (v) => AV(it).some((x) => normWord(x.split(' ')[q.pos] || '') === normWord(v)), { blank_pos: q.pos + 1 }, 'Chưa đúng. Đáp án: ' + A(it));
-  } else if (q.t === 'match') {
-    const right = shuffle(q.set.map((x, i) => ({ id: x.id, text: q.shown[i] }))), first = {}, wrongSet = new Set(); let sel = null, matched = 0;
-    const wrap = el('div', null, 'pairs'), lc = el('div'), rc = el('div'); wrap.append(lc, rc); body.append(wrap);
-    q.set.forEach((x) => lc.append(Object.assign(btn(P(x), (ev) => {
-      if (ev.currentTarget.classList.contains('ok')) return;
-      lc.querySelectorAll('.opt').forEach((b) => b.classList.remove('sel')); ev.currentTarget.classList.add('sel'); sel = x;
-    }, 'opt'), {})));
-    right.forEach((x) => rc.append(btn(x.text, (ev) => {
-      if (!sel || ev.currentTarget.classList.contains('ok')) return;
+
+function rFlash(q, body, it) {
+  const show = btn('Xem đáp án', () => {
+    show.remove(); body.append(el('p', A(it), 'reveal'));
+    const rate = (ok) => { record(q, it, null, { self_correct: ok }); settleFlash(ok, it); body.querySelectorAll('button').forEach((b) => { b.disabled = true; }); };
+    const r = el('div', null, 'row center'); r.append(btn('Chưa nhớ', () => rate(false), 'btn ghost'), btn('Đã nhớ', () => rate(true), 'btn')); body.append(r);
+  }, 'btn big'); body.append(show);
+}
+function rMcq(q, body, it) {
+  const grid = el('div', null, 'opts'); body.append(grid);
+  q.options.forEach((o) => grid.append(optBtn(o, (ev) => {
+    const ok = isAns(it, o);
+    grid.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (isAns(it, x.dataset.v)) x.classList.add('ok'); });
+    if (!ok) ev.currentTarget.classList.add('bad');
+    record(q, it, o); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + A(it));
+  })));
+}
+function rType(q, body, it) {
+  if (AV(it).length > 1) body.append(el('p', 'Có nhiều đáp án đồng nghĩa, chỉ cần nhập một trong số đó.', 'muted hint'));
+  askText(q, body, 'Chưa đúng. Đáp án: ' + A(it));
+}
+function rMatch(q, body) {
+  const right = shuffle(q.set.map((x, i) => ({ id: x.id, text: q.shown[i] }))), first = {}, wrong = new Set(); let sel = null, matched = 0;
+  const wrap = el('div', null, 'pairs'), lc = el('div', null, 'col'), rc = el('div', null, 'col'); wrap.append(lc, rc); body.append(wrap);
+  q.set.forEach((x) => {
+    const b = optBtn(P(x), () => { if (b.classList.contains('ok')) return; lc.querySelectorAll('.opt').forEach((n) => n.classList.remove('sel')); b.classList.add('sel'); sel = x; });
+    b.dataset.id = x.id; lc.append(b);
+  });
+  right.forEach((x) => {
+    const b = optBtn(x.text, () => {
+      if (!sel || b.classList.contains('ok')) return;
       if (first[sel.id] === undefined) first[sel.id] = x.text;
       if (x.id === sel.id) {
-        ev.currentTarget.classList.add('ok'); ev.currentTarget.disabled = true;
-        const lb = [...lc.children].find((b) => b.textContent === P(sel)); lb.classList.remove('sel'); lb.classList.add('ok'); lb.disabled = true;
+        b.classList.add('ok'); b.disabled = true;
+        const lb = lc.querySelector(`[data-id="${sel.id}"]`); lb.classList.remove('sel'); lb.classList.add('ok'); lb.disabled = true;
         sel = null; matched++;
-        if (matched === q.set.length) { const qid = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); q.set.forEach((m) => record(q, m, first[m.id], { qid })); settle(wrongSet.size === 0, wrongSet.size === 0 ? 'Đúng hết!' : `Đã ghép xong, sai ${wrongSet.size} cặp ở lần chọn đầu.`); }
-      } else { wrongSet.add(sel.id); ev.currentTarget.classList.add('bad'); const b = ev.currentTarget; setTimeout(() => b.classList.remove('bad'), 600); }
-    }, 'opt')));
+        if (matched === q.set.length) {
+          const qid = 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+          q.set.forEach((m) => record(q, m, first[m.id], { qid }));
+          settle(wrong.size === 0, wrong.size === 0 ? 'Đúng hết!' : `Đã ghép xong, sai ${wrong.size} cặp ở lần chọn đầu.`);
+        }
+      } else { wrong.add(sel.id); b.classList.add('bad'); setTimeout(() => b.classList.remove('bad'), 600); }
+    });
+    rc.append(b);
+  });
+}
+function rFill(q, body, it) {
+  const wrap = el('div', null, 'cells'), inputs = [];
+  const go = btn('Kiểm tra', () => {
+    const vals = inputs.map((i) => i.value);
+    if (vals.some((v) => !v)) return inputs[vals.findIndex((v) => !v)].focus();
+    const word = q.chars.map((c, i) => (q.blanks.includes(i) ? vals[q.blanks.indexOf(i)] : c)).join('');
+    inputs.forEach((i) => { i.disabled = true; }); go.disabled = true;
+    inputs.forEach((inp, k) => inp.classList.add(norm(inp.value) === norm(q.chars[q.blanks[k]]) ? 'ok' : 'bad'));
+    const ok = isAns(it, word); record(q, it, word); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + q.word);
+  }, 'btn');
+  q.chars.forEach((c, i) => {
+    if (c === ' ') return wrap.append(el('span', null, 'cell gap'));
+    if (!q.blanks.includes(i)) return wrap.append(el('span', c, 'cell'));
+    const inp = el('input', null, 'cell'), ascii = /^[\x21-\x7E]$/.test(c);
+    inp.autocomplete = 'off'; inp.autocapitalize = 'none'; inp.spellcheck = false; inp.lang = 'en';
+    inp.setAttribute('autocorrect', 'off'); inp.setAttribute('aria-label', `Ký tự thiếu thứ ${q.blanks.indexOf(i) + 1}`);
+    inp.addEventListener('input', () => {
+      let v = [...inp.value].pop() || '';
+      if (v && ascii ? !/^[A-Za-z0-9]$/.test(v) : v && !isAlnum(v)) v = '';
+      inp.value = v; const nx = inputs[inputs.indexOf(inp) + 1]; if (v && nx) nx.focus();
+    });
+    inp.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') { ev.preventDefault(); go.click(); }
+      else if (ev.key === 'Backspace' && !inp.value) { const pv = inputs[inputs.indexOf(inp) - 1]; if (pv) { ev.preventDefault(); pv.focus(); } }
+    });
+    inputs.push(inp); wrap.append(inp);
+  });
+  body.append(wrap, go); inputs[0].focus();
+}
+function rOrder(q, body, it) {
+  const slots = el('div', null, 'slots'), bank = el('div', null, 'bank'), placed = []; let locked = false;
+  const go = btn('Kiểm tra', () => {
+    locked = true; const ans = placed.map((t) => t.text).join(q.words ? ' ' : ''), ok = isAns(it, ans);
+    body.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+    slots.querySelectorAll('.opt').forEach((b) => b.classList.add(ok ? 'ok' : 'bad'));
+    record(q, it, ans); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + q.word);
+  }, 'btn');
+  const reset = btn('Làm lại', () => { if (!locked) { placed.length = 0; draw(); } }, 'btn ghost');
+  const mk = (t, fn, cls) => optBtn(t.text, fn, 'tilebtn ' + (q.words ? 'word ' : '') + cls);
+  function draw() {
+    slots.replaceChildren(); bank.replaceChildren();
+    placed.forEach((t, i) => slots.append(mk(t, () => { if (!locked) { placed.splice(i, 1); draw(); } }, 'on')));
+    for (let k = placed.length; k < q.tiles.length; k++) slots.append(el('span', null, 'slot-empty'));
+    q.tiles.forEach((t) => { const used = placed.includes(t), b = mk(t, () => { if (!locked) { placed.push(t); draw(); } }, used ? 'used' : ''); b.disabled = used; bank.append(b); });
+    go.disabled = placed.length !== q.tiles.length; reset.disabled = !placed.length; scheduleFit();
   }
+  const row = el('div', null, 'row center'); row.append(reset, go);
+  body.append(slots, bank, row); draw();
+}
+function rCount(q, body, it) {
+  const row = el('div', null, 'chars'), pad = el('div', null, 'keypad');
+  [...q.shown].forEach((c) => row.append(c === ' ' ? el('span', null, 'ch gap') : el('span', c.toUpperCase(), 'ch')));
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', ''].forEach((k) => {
+    if (!k) return pad.append(el('span'));
+    pad.append(optBtn(k, (ev) => {
+      const ok = Number(k) === q.n;
+      pad.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (Number(x.dataset.v) === q.n) x.classList.add('ok'); });
+      if (!ok) ev.currentTarget.classList.add('bad');
+      record(q, it, k, { shown: q.shown });
+      settle(ok, ok ? 'Đúng!' : `Chưa đúng. Có ${q.n} ký tự bị thay thế. Từ gốc: ${q.word}`);
+    }));
+  });
+  body.append(row, pad);
+}
+function rListen(q, body, it) {
+  const row = el('div', null, 'listen');
+  row.append(btn('Nghe', () => speak(q.say), 'btn big'), btn('Nghe chậm', () => speak(q.say, 0.5), 'btn ghost'));
+  body.append(row); askText(q, body, `Chưa đúng. Đáp án: ${A(it)} (${P(it)})`, false);
+  G.auto = setTimeout(() => speak(q.say), 300);
+}
+const RENDER = { flashcard: rFlash, mcq: rMcq, type: rType, match: rMatch, fill: rFill, order: rOrder, count: rCount, listen: rListen };
+function renderQ(q) {
+  const body = $('#g-body'), it = q.item; body.replaceChildren();
+  const fb = $('#g-fb'); fb.textContent = ''; fb.className = 'msg'; $('#g-next').hidden = true;
+  const dir = q.t === 'listen' ? 'Nghe → Anh' : G.dir === 'en_vi' ? 'Anh → Việt' : 'Việt → Anh';
+  $('#g-type').textContent = TYPE_LABEL[q.t] + (q.t === 'flashcard' ? ' (không tính điểm)' : '') + ' · ' + dir;
+  $('#g-prompt').textContent = q.t === 'match' ? 'Ghép mỗi mục với nghĩa tương ứng' : q.t === 'listen' ? 'Bạn nghe được từ gì?' : P(it);
+  $('#g-sub').textContent = SUB[q.t] || '';
+  $('#g-speak').hidden = !(canSpeak && G.dir === 'en_vi' && (q.t === 'flashcard' || q.t === 'mcq'));
+  RENDER[q.t](q, body, it); scheduleFit();
 }
 async function finishGame() {
   if (!G || G.over) return;
-  G.over = true; clearInterval(G.timer); clearTimeout(G.auto);
+  G.over = true; clearInterval(G.timer); clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
   const g = G; showPanel('result'); $('#res-stats').replaceChildren(); $('#res-weak').replaceChildren(); say($('#res-note'), 'Đang lưu kết quả…', true);
   await Promise.all(g.pending);
   await sb.rpc('finish_study_session', { sid: g.sid });
@@ -830,6 +1050,7 @@ async function sync(session) { state.user = session ? session.user : null; await
 async function init() {
   document.querySelectorAll('.btn, .del, nav a').forEach((n) => decorate(n));
   document.querySelectorAll('select').forEach(enhanceSelect);
+  $('#g-speak').innerHTML = icon('volume');
   document.addEventListener('click', (e) => document.querySelectorAll('.cs').forEach((w) => { if (!w.contains(e.target)) { w.querySelector('.cs-list').hidden = true; w.querySelector('.cs-btn').setAttribute('aria-expanded', 'false'); } }));
   $('#login-form').addEventListener('submit', onLogin);
   $('#register-form').addEventListener('submit', onRegister);
@@ -852,6 +1073,7 @@ async function init() {
   $('#st-mode').addEventListener('change', onModeChange);
   $('#g-next').addEventListener('click', nextQuestion);
   $('#g-quit').addEventListener('click', finishGame);
+  $('#g-speak').addEventListener('click', () => { if (G && G.q) speak(G.q.item.tv[0]); });
   $('#report-form').addEventListener('submit', onReport);
   $('#browse-sort').addEventListener('change', renderLibraries);
   $('#usr-q').addEventListener('input', debounce(renderUsers));
@@ -861,6 +1083,16 @@ async function init() {
   $('#rp-status').addEventListener('change', renderReports);
   $('#tag-cancel').addEventListener('click', resetTagForm);
   $('#res-again').addEventListener('click', () => { G = null; renderStudy(); });
+  // Bàn phím số vật lý cho câu "Đếm ký tự thay thế"
+  document.addEventListener('keydown', (e) => {
+    if (!G || G.over || !G.q || G.q.t !== 'count' || $('#study-play').hidden || e.target.closest('input,textarea')) return;
+    const b = $('#g-body').querySelector(`.keypad .opt[data-v="${e.key}"]`); if (b && !b.disabled) b.click();
+  });
+  // Vừa khung: tính lại khi nội dung, khu vực hiển thị hoặc kích thước màn hình đổi
+  new MutationObserver(scheduleFit).observe($('main'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  addEventListener('resize', debounce(scheduleFit, 120));
+  addEventListener('offline', () => toast('Bạn đang ngoại tuyến. Kết nối lại để tiếp tục học.'));
+  addEventListener('online', () => toast('Đã kết nối lại.'));
   window.addEventListener('hashchange', route);
   if (!sb) { route(); return; }
   const { data } = await sb.auth.getSession();

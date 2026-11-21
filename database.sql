@@ -312,6 +312,7 @@ create trigger trg_attempts_grade before insert on public.study_attempts for eac
 
 create or replace function public.bump_progress() returns trigger language plpgsql security definer set search_path = '' as $$
 begin
+  if new.qtype = 'flashcard' then return new; end if; -- flashcard tự đánh giá: không tính vào tiến độ từ
   insert into public.word_progress(user_id, item_id, seen, correct, wrong, last_seen)
   values (new.user_id, new.item_id, 1, case when new.correct then 1 else 0 end, case when new.correct then 0 else 1 end, pg_catalog.now())
   on conflict (user_id, item_id) do update set seen = public.word_progress.seen + 1,
@@ -324,8 +325,8 @@ create trigger trg_attempts_progress after insert on public.study_attempts for e
 create or replace function public.finish_study_session(sid uuid) returns void language plpgsql security definer set search_path = '' as $$
 begin
   update public.study_sessions s set ended_at = pg_catalog.now(),
-    total = (select count(*) from public.study_attempts a where a.session_id = s.id),
-    correct = (select count(*) from public.study_attempts a where a.session_id = s.id and a.correct),
+    total = (select count(*) from public.study_attempts a where a.session_id = s.id and a.qtype <> 'flashcard'),
+    correct = (select count(*) from public.study_attempts a where a.session_id = s.id and a.qtype <> 'flashcard' and a.correct),
     duration_seconds = extract(epoch from pg_catalog.now() - s.started_at)::int
   where s.id = sid and s.user_id = (select auth.uid()) and s.ended_at is null;
 end $$;
@@ -455,6 +456,8 @@ drop trigger if exists trg_tags_delete_guard on public.tags;
 create trigger trg_tags_delete_guard before delete on public.tags for each row execute function public.tag_delete_guard();
 
 -- Cộng đồng: tác giả, điểm và lượt học lấy từ dữ liệu thật (người học khác chủ thư viện, đếm theo người).
+-- (Bản này được thay bằng bản có danh sách thẻ ở PROMPT 4; DROP để chạy lại không lỗi khi đổi kiểu trả về.)
+drop function if exists public.community_libraries(text, uuid, text, int);
 create or replace function public.community_libraries(q text default '', tagid uuid default null, sortby text default 'new', lim int default 40)
 returns table(id uuid, title text, description text, author text, tag_name text, tag_color text, items int, avg_rating numeric, rating_count int, learners int, created_at timestamptz)
 language sql stable security definer set search_path = '' as $$
@@ -604,60 +607,159 @@ grant execute on function public.can_rate(uuid), public.can_report(uuid), public
   public.admin_reports(text), public.admin_libraries(text, text, text), public.admin_stats(), public.admin_recent_activity(int, text),
   public.delete_account(uuid) to authenticated;
 
--- ===================== CẬP NHẬT: hai chiều ngẫu nhiên từng câu + flashcard không tính điểm =====================
-do $$ declare c record; begin
-  for c in select conname from pg_constraint where conrelid = 'public.study_sessions'::regclass and contype = 'c' and pg_get_constraintdef(oid) like '%direction%' loop
-    execute format('alter table public.study_sessions drop constraint %I', c.conname);
-  end loop;
-end $$;
-alter table public.study_sessions add constraint study_sessions_direction_check check (direction in ('en_vi','vi_en','mixed'));
-alter table public.study_attempts add column if not exists direction text;
-alter table public.study_attempts drop constraint if exists study_attempts_direction_check;
-alter table public.study_attempts add constraint study_attempts_direction_check check (direction in ('en_vi','vi_en'));
-alter table public.study_attempts add column if not exists qid text check (char_length(qid) <= 60);
-grant insert (direction, qid) on public.study_attempts to authenticated;
+-- ===================== PROMPT 4: nhiều thẻ, 8 dạng câu hỏi, chấm điểm mới (chạy lại an toàn) =====================
+-- Khớp với script.js hiện tại: bảng library_tags (tối đa 3 thẻ / thư viện), thẻ trả về từ cộng đồng,
+-- dạng câu hỏi order/count/listen, đáp án đồng nghĩa "a | b", câu ghép cặp tính là 1 câu.
 
+-- 1) Nhiều thẻ cho một thư viện (tối đa 3, chặn ở database)
+create table if not exists public.library_tags (
+  library_id uuid not null references public.libraries(id) on delete cascade,
+  tag_id uuid not null references public.tags(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (library_id, tag_id));
+create index if not exists library_tags_tag_idx on public.library_tags(tag_id);
+-- Chuyển thẻ đơn cũ (libraries.tag_id) sang bảng mới.
+insert into public.library_tags(library_id, tag_id)
+  select id, tag_id from public.libraries where tag_id is not null on conflict do nothing;
+
+create or replace function public.library_tags_guard() returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if (select count(*) from public.library_tags where library_id = new.library_id) >= 3 then
+    raise exception 'Mỗi thư viện chỉ được gắn tối đa 3 thẻ'; end if;
+  return new;
+end $$;
+drop trigger if exists trg_library_tags_guard on public.library_tags;
+create trigger trg_library_tags_guard before insert on public.library_tags for each row execute function public.library_tags_guard();
+
+alter table public.library_tags enable row level security;
+revoke all on public.library_tags from anon, authenticated;
+grant select, insert, delete on public.library_tags to authenticated;
+drop policy if exists lt_select on public.library_tags;
+create policy lt_select on public.library_tags for select to authenticated
+  using (exists (select 1 from public.libraries l where l.id = library_id));
+drop policy if exists lt_insert on public.library_tags;
+create policy lt_insert on public.library_tags for insert to authenticated with check (exists (select 1 from public.libraries l where l.id = library_id and
+  ((l.owner_id = (select auth.uid()) and l.source <> 'system' and l.moderation <> 'locked' and public.is_active()) or (l.source = 'system' and public.has_role('boss')))));
+drop policy if exists lt_delete on public.library_tags;
+create policy lt_delete on public.library_tags for delete to authenticated using (exists (select 1 from public.libraries l where l.id = library_id and
+  ((l.owner_id = (select auth.uid()) and l.source <> 'system' and l.moderation <> 'locked' and public.is_active()) or (l.source = 'system' and public.has_role('boss')))));
+
+-- Không xóa thẻ đang được thư viện sử dụng (tính theo bảng library_tags).
+create or replace function public.tag_delete_guard() returns trigger language plpgsql security definer set search_path = '' as $$
+declare n int;
+begin
+  select count(*) into n from public.library_tags where tag_id = old.id;
+  if n > 0 then raise exception 'Thẻ đang được dùng bởi % thư viện, không thể xóa', n; end if;
+  return old;
+end $$;
+
+-- 2) Mục từ: mỗi vế tối đa 300 ký tự (tính cả các đáp án đồng nghĩa ngăn cách bằng |)
+alter table public.library_items drop constraint if exists library_items_term_check;
+alter table public.library_items add constraint library_items_term_check check (char_length(term) between 1 and 300);
+
+-- 3) Học tập: chiều "mixed", 8 dạng câu hỏi, thêm cột direction / qid / shown
+alter table public.study_sessions drop constraint if exists study_sessions_direction_check;
+alter table public.study_sessions add constraint study_sessions_direction_check check (direction in ('en_vi','vi_en','mixed'));
+alter table public.study_attempts drop constraint if exists study_attempts_qtype_check;
+alter table public.study_attempts add constraint study_attempts_qtype_check
+  check (qtype in ('flashcard','mcq','type','match','fill','order','count','listen'));
+alter table public.study_attempts add column if not exists direction text;
+alter table public.study_attempts add column if not exists qid text;
+alter table public.study_attempts add column if not exists shown text;
+alter table public.study_attempts drop constraint if exists study_attempts_direction_chk;
+alter table public.study_attempts add constraint study_attempts_direction_chk check (direction is null or direction in ('en_vi','vi_en'));
+alter table public.study_attempts drop constraint if exists study_attempts_qid_chk;
+alter table public.study_attempts add constraint study_attempts_qid_chk check (qid is null or char_length(qid) <= 40);
+alter table public.study_attempts drop constraint if exists study_attempts_shown_chk;
+alter table public.study_attempts add constraint study_attempts_shown_chk check (shown is null or char_length(shown) <= 300);
+create index if not exists attempts_qid_idx on public.study_attempts(session_id, qid);
+grant insert (session_id, item_id, qtype, answer, blank_pos, self_correct, direction, qid, shown) on public.study_attempts to authenticated;
+
+-- Tách đáp án đồng nghĩa "a | b | c" thành mảng đã chuẩn hóa (chữ thường, gọn khoảng trắng).
+create or replace function public.variants(t text) returns text[] language sql immutable set search_path = '' as $$
+  select coalesce(array(select public.norm(u.x) from pg_catalog.unnest(pg_catalog.string_to_array(t, '|')) as u(x) where public.norm(u.x) <> ''), '{}'::text[]) $$;
+
+-- Chấm điểm ở database (client chỉ gửi câu trả lời):
+--  - flashcard: tự đánh giá, không tính điểm
+--  - mcq / type / match / fill / order / listen: đáp án phải trùng một trong các đáp án đồng nghĩa
+--  - count: đáp án là số ký tự khác nhau giữa chuỗi đã bị thay (shown) và từ gốc
+--  - type / fill / order / count / listen luôn hỏi chiều Việt → Anh; mcq / match theo chiều client gửi
 create or replace function public.grade_attempt() returns trigger language plpgsql security definer set search_path = '' as $$
-declare s public.study_sessions; it public.library_items; exp text; dir text;
+declare s public.study_sessions; it public.library_items; v text[]; dn text; w text; sh text; cnt int; ok boolean := false;
 begin
   select * into s from public.study_sessions where id = new.session_id and user_id = (select auth.uid());
   if not found or s.ended_at is not null then raise exception 'Phiên học không hợp lệ'; end if;
   select * into it from public.library_items where id = new.item_id and library_id = s.library_id;
   if not found then raise exception 'Mục từ không thuộc thư viện của phiên học'; end if;
   new.user_id := s.user_id;
-  dir := case when s.direction = 'mixed' then new.direction else s.direction end;
-  if new.qtype <> 'flashcard' and dir is null then raise exception 'Thiếu chiều học của câu hỏi'; end if;
-  new.direction := dir;
   if new.qtype = 'flashcard' then
     new.correct := coalesce(new.self_correct, false);
-  else
-    exp := case when dir = 'en_vi' then it.meaning else it.term end;
-    if new.qtype = 'fill' then
-      new.correct := new.answer is not null and public.norm_word(new.answer) =
-        public.norm_word((pg_catalog.regexp_split_to_array(pg_catalog.btrim(exp), '\s+'))[new.blank_pos]);
-    else
-      new.correct := new.answer is not null and public.norm(new.answer) = public.norm(exp);
-    end if;
+    return new;
   end if;
+  dn := case when new.qtype in ('type','fill','order','count','listen') then 'vi_en'
+             when s.direction in ('en_vi','vi_en') then s.direction
+             else coalesce(new.direction, 'vi_en') end;
+  new.direction := dn;
+  v := public.variants(case when dn = 'en_vi' then it.meaning else it.term end);
+  if new.qtype = 'count' then
+    if new.answer ~ '^[0-9]$' and new.shown is not null then
+      sh := public.norm(new.shown);
+      foreach w in array v loop
+        if pg_catalog.char_length(w) = pg_catalog.char_length(sh) then
+          select count(*)::int into cnt from pg_catalog.generate_series(1, pg_catalog.char_length(w)) g
+            where pg_catalog.substr(w, g, 1) <> pg_catalog.substr(sh, g, 1);
+          if cnt = new.answer::int then ok := true; end if;
+        end if;
+      end loop;
+    end if;
+  else
+    ok := new.answer is not null and public.norm(new.answer) = any (v);
+  end if;
+  new.correct := ok;
   return new;
 end $$;
 
--- Flashcard là tự đánh giá: không tính vào điểm, số câu và tiến độ từ vựng.
-create or replace function public.bump_progress() returns trigger language plpgsql security definer set search_path = '' as $$
-begin
-  if new.qtype = 'flashcard' then return new; end if;
-  insert into public.word_progress(user_id, item_id, seen, correct, wrong, last_seen)
-  values (new.user_id, new.item_id, 1, case when new.correct then 1 else 0 end, case when new.correct then 0 else 1 end, pg_catalog.now())
-  on conflict (user_id, item_id) do update set seen = public.word_progress.seen + 1,
-    correct = public.word_progress.correct + excluded.correct, wrong = public.word_progress.wrong + excluded.wrong, last_seen = pg_catalog.now();
-  return new;
-end $$;
-
+-- Kết thúc phiên: câu ghép cặp (cùng qid) tính là 1 câu, chỉ đúng khi cả 4 cặp đúng.
 create or replace function public.finish_study_session(sid uuid) returns void language plpgsql security definer set search_path = '' as $$
 begin
   update public.study_sessions s set ended_at = pg_catalog.now(),
-    total = (select count(*) from (select 1 from public.study_attempts a where a.session_id = s.id and a.qtype <> 'flashcard' group by coalesce(a.qid, a.id::text)) g),
-    correct = (select count(*) from (select 1 from public.study_attempts a where a.session_id = s.id and a.qtype <> 'flashcard' group by coalesce(a.qid, a.id::text) having bool_and(a.correct)) g),
+    total = (select count(distinct coalesce(a.qid, a.id::text))::int from public.study_attempts a where a.session_id = s.id and a.qtype <> 'flashcard'),
+    correct = (select count(*)::int from (
+        select coalesce(a.qid, a.id::text) as k, bool_and(a.correct) as ok
+        from public.study_attempts a where a.session_id = s.id and a.qtype <> 'flashcard' group by 1) g where g.ok),
     duration_seconds = extract(epoch from pg_catalog.now() - s.started_at)::int
   where s.id = sid and s.user_id = (select auth.uid()) and s.ended_at is null;
 end $$;
+
+-- 4) Cộng đồng: trả về danh sách thẻ (jsonb) và lọc theo bảng library_tags
+drop function if exists public.community_libraries(text, uuid, text, int);
+create or replace function public.community_libraries(q text default '', tagid uuid default null, sortby text default 'new', lim int default 40)
+returns table(id uuid, title text, description text, author text, tags jsonb, items int, avg_rating numeric, rating_count int, learners int, created_at timestamptz)
+language sql stable security definer set search_path = '' as $$
+  select x.id, x.title, x.description, x.author, x.tags, x.items, x.avg_rating, x.rating_count, x.learners, x.created_at
+  from (
+    select l.id, l.title, l.description, p.username as author,
+      coalesce((select jsonb_agg(jsonb_build_object('id', t.id, 'name', t.name, 'color', t.color) order by t.name)
+                from public.library_tags lt join public.tags t on t.id = lt.tag_id where lt.library_id = l.id), '[]'::jsonb) as tags,
+      (select count(*)::int from public.library_items i where i.library_id = l.id) as items,
+      (select round(avg(r.stars)::numeric, 2) from public.library_ratings r where r.library_id = l.id) as avg_rating,
+      (select count(*)::int from public.library_ratings r where r.library_id = l.id) as rating_count,
+      (select count(distinct s.user_id)::int from public.study_sessions s where s.library_id = l.id and s.user_id <> l.owner_id and s.ended_at is not null) as learners,
+      ((select coalesce(sum(r.stars), 0) from public.library_ratings r where r.library_id = l.id) + 9.0)
+        / ((select count(*) from public.library_ratings r where r.library_id = l.id) + 3) as score,
+      l.created_at
+    from public.libraries l
+    join public.profiles p on p.id = l.owner_id
+    where l.visibility = 'public' and l.source <> 'system' and l.moderation in ('ok','reported')
+      and (q = '' or l.title ilike '%' || replace(replace(q, '%', ''), '_', '') || '%')
+      and (tagid is null or exists (select 1 from public.library_tags lt2 where lt2.library_id = l.id and lt2.tag_id = tagid))
+      and (select auth.uid()) is not null
+  ) x
+  order by case when sortby = 'rating' then x.score end desc nulls last,
+           case when sortby = 'popular' then x.learners end desc nulls last,
+           x.created_at desc
+  limit least(greatest(lim, 1), 100) $$;
+
+revoke execute on function public.library_tags_guard(), public.variants(text) from public, anon, authenticated;
+revoke execute on function public.community_libraries(text, uuid, text, int) from public, anon;
+grant execute on function public.community_libraries(text, uuid, text, int) to authenticated;

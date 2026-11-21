@@ -2,18 +2,27 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Vocabest — Học từ vựng mỗi ngày</title>
+<meta name="theme-color" content="#ffc933">
+<meta name="color-scheme" content="light">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vocabest">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" sizes="180x180" href="logo.png">
 <link rel="stylesheet" href="style.css">
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script defer src="script.js"></script>
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="#/">Vocabest</a>
+  <a class="brand" href="#/" aria-label="Vocabest"><img src="logo.png" alt="" width="36" height="36" onerror="this.remove()"><span>Vocabest</span></a>
   <nav id="nav">
-    <a href="#/libraries" data-auth="in" data-icon="book">Thư viện</a>
     <a href="#/study" data-auth="in" data-icon="play">Học</a>
+    <a href="#/libraries" data-auth="in" data-icon="book">Thư viện</a>
     <a href="#/progress" data-auth="in" data-icon="chart">Tiến độ</a>
     <a href="#/dashboard" data-auth="in" data-icon="grid">Của tôi</a>
     <a href="#/admin" id="nav-admin" data-icon="shield" hidden>Quản trị</a>
@@ -27,20 +36,20 @@
   <section data-view="home" class="hero">
     <div>
       <h1>Mỗi từ mới là một bước tiến.</h1>
-      <p>Tạo thư viện từ vựng của riêng bạn, gắn thẻ theo trình độ CEFR và giữ riêng tư hoặc công khai tùy bạn.</p>
+      <p>Tạo thư viện từ vựng của riêng bạn, gắn tối đa 3 thẻ trình độ CEFR và giữ riêng tư hoặc công khai tùy bạn. Học bằng flashcard, ghép cặp, sắp xếp chữ, nghe và gõ lại.</p>
       <p class="row">
         <a class="btn" href="#/register" data-auth="out">Tạo tài khoản</a>
         <a class="btn ghost" href="#/login" data-auth="out">Đăng nhập</a>
-        <a class="btn" href="#/dashboard" data-auth="in">Vào bảng điều khiển</a>
+        <a class="btn" href="#/study" data-auth="in">Vào học</a>
       </p>
     </div>
-    <div class="wordcard" aria-hidden="true"><span class="term">resilient</span><span class="mean">kiên cường, mau phục hồi</span><span class="chip">B2</span></div>
+    <div class="wordcard" aria-hidden="true"><span class="term">resilient</span><span class="mean">kiên cường, mau phục hồi</span><span class="chips"><span class="chip">B2</span><span class="chip">C1</span></span></div>
   </section>
 
   <section data-view="login" class="panel" hidden>
     <h2>Đăng nhập</h2>
     <form id="login-form" novalidate>
-      <label>Tên đăng nhập<input name="username" autocomplete="username" required></label>
+      <label>Tên đăng nhập<input name="username" autocomplete="username" autocapitalize="none" required></label>
       <label>Mật khẩu<input name="password" type="password" autocomplete="current-password" required></label>
       <p class="msg" id="login-msg" role="alert"></p>
       <button class="btn" type="submit">Đăng nhập</button>
@@ -51,7 +60,7 @@
   <section data-view="register" class="panel" hidden>
     <h2>Đăng ký</h2>
     <form id="register-form" novalidate>
-      <label>Tên đăng nhập<input name="username" autocomplete="username" required>
+      <label>Tên đăng nhập<input name="username" autocomplete="username" autocapitalize="none" required>
         <small>3–20 ký tự: chữ thường a–z, số hoặc dấu gạch dưới.</small></label>
       <label>Mật khẩu<input name="password" type="password" autocomplete="new-password" required><small>Tối thiểu 8 ký tự.</small></label>
       <label>Nhập lại mật khẩu<input name="confirm" type="password" autocomplete="new-password" required></label>
@@ -64,16 +73,16 @@
   <section data-view="dashboard" class="wide" hidden>
     <h2>Xin chào, <span id="dash-name"></span></h2>
     <p class="banner warn" id="locked-note" hidden>Tài khoản đang bị khóa nên bạn chưa thể tạo hoặc sửa thư viện.</p>
-    <form id="lib-form" class="card" novalidate>
-      <h3>Tạo thư viện mới</h3>
-      <label>Tên thư viện<input name="title" maxlength="80" required></label>
-      <label>Mô tả<textarea name="description" maxlength="500" rows="2"></textarea></label>
-      <div class="row">
-        <label>Thẻ trình độ<select name="tag_id" id="tag-select"><option value="">Không gắn thẻ</option></select></label>
-      </div>
-      <p class="msg" id="lib-msg" role="alert"></p>
-      <button class="btn" type="submit">Tạo thư viện</button>
-    </form>
+    <details id="lib-create" class="card fold">
+      <summary>Tạo thư viện mới</summary>
+      <form id="lib-form" novalidate>
+        <label>Tên thư viện<input name="title" maxlength="80" required></label>
+        <label>Mô tả<textarea name="description" maxlength="500" rows="2"></textarea></label>
+        <fieldset id="tag-pick-new" class="tagpick"><legend>Thẻ trình độ (tối đa 3)</legend></fieldset>
+        <p class="msg" id="lib-msg" role="alert"></p>
+        <button class="btn" type="submit">Tạo thư viện</button>
+      </form>
+    </details>
     <h3>Thư viện của bạn</h3>
     <p id="lib-loading">Đang tải…</p>
     <p id="lib-empty" hidden>Bạn chưa có thư viện nào. Hãy tạo thư viện đầu tiên ở trên.</p>
@@ -97,7 +106,7 @@
   <section data-view="library" class="wide" hidden>
     <p><a href="#/libraries">← Danh sách thư viện</a></p>
     <h2 id="lib-title"></h2>
-    <p class="meta"><span id="lib-tag" class="tag" hidden></span><span id="lib-stats"></span></p>
+    <p class="meta"><span id="lib-tags" class="chips"></span><span id="lib-stats"></span></p>
     <p id="lib-desc"></p>
     <p><button class="btn" id="lib-study" type="button">Học thư viện này</button> <small id="lib-study-note"></small></p>
     <div id="lib-social" class="card" hidden>
@@ -121,23 +130,21 @@
       <h3>Thông tin thư viện</h3>
       <label>Tên<input name="title" maxlength="80" required></label>
       <label>Mô tả<textarea name="description" maxlength="500" rows="2"></textarea></label>
-      <div class="row">
-        <label>Hiển thị<select name="visibility"><option value="private">Riêng tư</option><option value="public">Công khai (cần tối thiểu 8 mục)</option></select></label>
-        <label>Thẻ trình độ<select name="tag_id" id="edit-tag"><option value="">Không gắn thẻ</option></select></label>
-      </div>
+      <label>Hiển thị<select name="visibility"><option value="private">Riêng tư</option><option value="public">Công khai (cần tối thiểu 8 mục)</option></select></label>
+      <fieldset id="tag-pick-edit" class="tagpick"><legend>Thẻ trình độ (tối đa 3)</legend></fieldset>
       <p class="msg" id="edit-msg" role="alert"></p><button class="btn" type="submit">Lưu thay đổi</button>
     </form>
     <div id="lib-import-box" hidden>
       <form id="import-form" class="card" novalidate>
         <h3>Nhập hàng loạt</h3>
-        <label>Mỗi dòng một mục theo dạng A : B<textarea name="text" rows="6" placeholder="apple : táo&#10;break the ice : phá vỡ sự ngại ngùng&#10;big | large : to | lớn"></textarea><small>Từ đồng nghĩa ngăn cách bằng dấu |, ví dụ <b>big | large : to | lớn</b>. Khi gõ đáp án, nhập một trong các đáp án đồng nghĩa đều được tính đúng.</small></label>
+        <label>Mỗi dòng một mục theo dạng A : B<textarea name="text" rows="6" placeholder="apple : táo&#10;break the ice : phá vỡ sự ngại ngùng&#10;big | large : to | lớn"></textarea><small>Vế A là tiếng Anh, vế B là tiếng Việt. Từ đồng nghĩa ngăn cách bằng dấu |, ví dụ <b>big | large : to | lớn</b>. Khi gõ đáp án, nhập một trong các đáp án đồng nghĩa đều được tính đúng.</small></label>
         <p class="row"><button class="btn ghost" type="button" id="import-preview">Xem trước</button><button class="btn" type="submit" id="import-go" disabled>Nhập các dòng hợp lệ</button></p>
         <p class="msg" id="import-msg" role="alert"></p>
         <ul id="import-list" class="plain"></ul>
       </form>
       <form id="item-form" class="card" novalidate>
         <h3>Thêm một mục</h3>
-        <div class="row"><label>Vế A (đồng nghĩa: dùng |)<input name="term" maxlength="300" required></label><label>Vế B (đồng nghĩa: dùng |)<input name="meaning" maxlength="300" required></label></div>
+        <div class="row"><label>Vế A: tiếng Anh (đồng nghĩa: dùng |)<input name="term" maxlength="300" required></label><label>Vế B: tiếng Việt (đồng nghĩa: dùng |)<input name="meaning" maxlength="300" required></label></div>
         <p class="msg" id="item-msg" role="alert"></p><button class="btn" type="submit">Thêm mục</button>
       </form>
     </div>
@@ -147,29 +154,43 @@
 
   <section data-view="study" class="wide" hidden>
     <h2>Học từ vựng</h2>
-    <form id="study-setup" class="card" novalidate>
-      <div class="row">
-        <label>Nguồn<select id="st-src"><option value="mine">Bản thân</option><option value="system">Hệ thống</option><option value="community">Cộng đồng</option></select></label>
-        <label>Thư viện<select id="st-lib"></select></label>
+    <form id="study-setup" novalidate>
+      <div class="setup">
+        <div class="card frame">
+          <h3>Thư viện</h3>
+          <label>Nguồn<select id="st-src"><option value="mine">Bản thân</option><option value="system">Hệ thống</option><option value="community">Cộng đồng</option></select></label>
+          <label>Thư viện<select id="st-lib"></select></label>
+        </div>
+        <div class="card frame">
+          <h3>Chế độ</h3>
+          <label>Kiểu chơi<select id="st-mode"><option value="classic">Classic: theo số câu</option><option value="speed">Speed: theo thời gian</option></select></label>
+          <label><span id="st-num-label">Số câu</span><input id="st-num" type="number" min="1" max="100" value="10" inputmode="numeric"></label>
+        </div>
+        <div class="card frame wide-frame">
+          <h3>Dạng câu hỏi</h3>
+          <fieldset id="st-types"><legend class="sr">Dạng câu hỏi</legend>
+            <label><input type="checkbox" value="flashcard" checked>Flashcard</label>
+            <label><input type="checkbox" value="mcq" checked>Trắc nghiệm</label>
+            <label><input type="checkbox" value="type" checked>Nhập đáp án</label>
+            <label><input type="checkbox" value="match" checked>Ghép cặp</label>
+            <label><input type="checkbox" value="fill" checked>Điền chỗ trống</label>
+            <label><input type="checkbox" value="order" checked>Sắp xếp</label>
+            <label><input type="checkbox" value="count" checked>Đếm ký tự thay thế</label>
+            <label><input type="checkbox" value="listen" checked>Nghe và nhập</label>
+          </fieldset>
+          <p class="muted hint">Trắc nghiệm, ghép cặp và flashcard chọn ngẫu nhiên chiều Anh → Việt hoặc Việt → Anh. Nhập đáp án, điền chỗ trống, sắp xếp, đếm ký tự và nghe đều hỏi bằng tiếng Việt (hoặc âm thanh) và trả lời bằng tiếng Anh. Flashcard chỉ để tự ôn: không tính điểm và không tính vào số câu (trừ khi bạn chỉ chọn Flashcard).</p>
+        </div>
       </div>
-      <div class="row">
-        <label>Chế độ<select id="st-mode"><option value="classic">Classic: theo số câu</option><option value="speed">Speed: theo thời gian</option></select></label>
-        <label><span id="st-num-label">Số câu</span><input id="st-num" type="number" min="1" max="100" value="10"></label>
-      </div>
-      <fieldset id="st-types"><legend>Dạng câu hỏi</legend>
-        <label><input type="checkbox" value="flashcard" checked>Flashcard</label>
-        <label><input type="checkbox" value="mcq" checked>Trắc nghiệm</label>
-        <label><input type="checkbox" value="type" checked>Nhập đáp án</label>
-        <label><input type="checkbox" value="match" checked>Ghép cặp</label>
-        <label><input type="checkbox" value="fill" checked>Điền chỗ trống</label>
-      </fieldset>
-      <p class="muted hint">Mỗi câu hỏi tự chọn ngẫu nhiên chiều Anh → Việt hoặc Việt → Anh. Flashcard chỉ để tự ôn: không tính điểm và không tính vào số câu (trừ khi bạn chỉ chọn Flashcard).</p>
-      <p class="msg" id="st-msg" role="alert"></p><button class="btn" type="submit">Bắt đầu</button>
+      <p class="msg" id="st-msg" role="alert"></p>
+      <div class="startbar"><button class="btn big" type="submit">Bắt đầu</button></div>
     </form>
     <div id="study-play" class="card" hidden>
       <div class="gbar"><span id="g-info"></span><span id="g-score"></span><button class="btn small ghost" id="g-quit" type="button">Kết thúc</button></div>
       <div class="track"><div id="g-fill"></div></div>
-      <p id="g-type" class="muted"></p><h3 id="g-prompt"></h3><div id="g-body"></div>
+      <p id="g-type" class="muted"></p>
+      <div class="promptrow"><h3 id="g-prompt"></h3><button class="iconbtn" id="g-speak" type="button" aria-label="Nghe phát âm" hidden></button></div>
+      <p id="g-sub" class="muted"></p>
+      <div id="g-body"></div>
       <p id="g-fb" class="msg" role="status"></p><p><button class="btn" id="g-next" type="button" hidden>Câu tiếp</button></p>
     </div>
     <div id="study-result" class="card" hidden>
@@ -235,6 +256,7 @@
   <section data-view="settings" class="panel" hidden>
     <h2>Cài đặt</h2>
     <p>Tên đăng nhập: <strong id="set-name"></strong><br>Vai trò: <strong id="set-role"></strong></p>
+    <div id="install-card" class="card" hidden><h3>Dùng như ứng dụng</h3><p id="install-text" class="muted"></p></div>
     <form id="pw-form" novalidate>
       <h3>Đổi mật khẩu</h3>
       <label>Mật khẩu mới<input name="password" type="password" autocomplete="new-password" required></label>
