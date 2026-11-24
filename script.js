@@ -56,7 +56,7 @@ const icon = (n) => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" fill
 const ICON_FOR = [[/^Xóa/, 'trash'], [/^Sửa/, 'edit'], [/^Mở khóa/, 'unlock'], [/^Khóa/, 'lock'], [/^Ẩn/, 'eyeoff'], [/^Mở lại|^Học lại|^Làm lại/, 'refresh'], [/^Quản lý từ/, 'list'],
   [/chi tiết|^Xem thư viện|^Xem trước|^Xem đáp án/i, 'eye'], [/^Học|^Bắt đầu|^Vào học/, 'play'], [/Admin/, 'shield'], [/^Chấp nhận|^Kiểm tra|^Đã nhớ|^Xác nhận/, 'check'],
   [/^Từ chối|^Đóng|^Chưa nhớ|^Hủy/, 'x'], [/^Đánh dấu|^Gửi báo cáo/, 'flag'], [/^Câu tiếp|^Xem kết quả/, 'arrow'], [/^Kết thúc/, 'stop'], [/^Xem tiến độ/, 'chart'],
-  [/^Đăng xuất/, 'logout'], [/^Đăng nhập/, 'login'], [/^Đăng ký|^Tạo tài khoản/, 'userplus'], [/^Lưu/, 'save'], [/^Nhập/, 'upload'], [/^Tạo|^Thêm/, 'plus'], [/^Vào bảng/, 'grid'], [/^Nghe/, 'volume']];
+  [/^Gửi đáp án/, 'check'], [/^Chọn/, 'book'], [/^Đăng xuất/, 'logout'], [/^Đăng nhập/, 'login'], [/^Đăng ký|^Tạo tài khoản/, 'userplus'], [/^Lưu/, 'save'], [/^Nhập/, 'upload'], [/^Tạo|^Thêm/, 'plus'], [/^Vào bảng/, 'grid'], [/^Nghe/, 'volume']];
 function decorate(node, name) {
   if (node.querySelector('svg')) return;
   const label = node.textContent.trim(), ic = name || node.dataset.icon || (ICON_FOR.find(([re]) => re.test(label)) || [])[1];
@@ -140,7 +140,32 @@ function fit(frame, min = 11) {
   const over = () => frame.scrollHeight > frame.clientHeight + 1 || frame.scrollWidth > frame.clientWidth + 1;
   while (over() && size > min) { size -= 1; t.style.fontSize = size + 'px'; }
 }
-const fitAll = () => document.querySelectorAll('.fitbox, .lib h4, #g-prompt').forEach((n) => fit(n));
+// Cỡ ô ký tự dùng chung cho điền chỗ trống, đếm ký tự và sắp xếp: chọn theo bề rộng khung, ưu tiên tối đa 2 hàng, không dùng scale.
+function pickSize(words, W, g, wgFixed, cap) {
+  const rowsAt = (s) => {
+    const wg = wgFixed == null ? Math.round(s * 0.45) : wgFixed; let rows = 1, x = 0;
+    for (const n of words) {
+      const w = n * s + (n - 1) * g;
+      if (w > W) return 99;
+      if (x && x + wg + w > W) { rows++; x = w; } else x += (x ? wg : 0) + w;
+    }
+    return rows;
+  };
+  for (const maxRows of [2, 3]) for (let s = cap; s >= 20; s--) if (rowsAt(s) <= maxRows) return s;
+  for (let s = 20; s >= 12; s--) if (rowsAt(s) < 99) return s;
+  return 12;
+}
+function sizeGrid() {
+  const q = G && G.q, body = $('#g-body');
+  if (!q || !body || !body.clientWidth || !['fill', 'count', 'order'].includes(q.t)) return;
+  const W = body.clientWidth - (q.t === 'order' ? 30 : 2), cap = W < 480 ? 36 : 44;
+  let s;
+  if (q.t === 'count') s = pickSize(q.shown.split(' ').filter(Boolean).map((w) => [...w].length), W, 3, null, cap);
+  else if (q.t === 'fill') s = pickSize(q.chars.join('').split(' ').filter(Boolean).map((w) => [...w].length), W, 3, null, cap);
+  else s = q.words ? Math.min(cap, 34) : pickSize(q.tiles.map(() => 1), W, 0, 6, cap);
+  body.style.setProperty('--cs', s + 'px');
+}
+const fitAll = () => { document.querySelectorAll('.fitbox, .lib h4, #g-prompt').forEach((n) => fit(n)); sizeGrid(); };
 let fitRaf = 0;
 const scheduleFit = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitAll); };
 
@@ -558,26 +583,53 @@ function applyPrefs() {
 }
 
 function studyFromLib() { studyFrom = { id: curLib.id, src: curLib.source === 'system' ? 'system' : curLib.owner_id === state.user.id ? 'mine' : 'community' }; location.hash = '#/study'; }
-function showPanel(p) { $('#study-setup').hidden = p !== 'setup'; $('#study-play').hidden = p !== 'play'; $('#study-result').hidden = p !== 'result'; }
-let stSeq = 0;
-async function loadStudyLibs() {
-  const my = ++stSeq, sel = $('#st-lib'); say($('#st-msg'), ''); sel.replaceChildren(new Option('Đang tải…', ''));
-  const rows = await fetchLibs($('#st-src').value, '', '');
-  if (my !== stSeq) return;
-  sel.replaceChildren();
-  if (!rows || !rows.length) { sel.append(new Option('Chưa có thư viện nào', '')); return; }
-  rows.forEach((l) => { const o = new Option(`${l.title} (${l.n} mục${l.n < MIN_ITEMS ? ', bản nháp' : ''})`, l.id); o.disabled = l.n < MIN_ITEMS; sel.append(o); });
-  const first = [...sel.options].find((o) => !o.disabled); sel.value = first ? first.value : '';
-  if (prefLib && [...sel.options].some((o) => o.value === prefLib && !o.disabled)) sel.value = prefLib;
-  prefLib = null;
-  if (!first) say($('#st-msg'), `Chưa có thư viện nào đủ ${MIN_ITEMS} mục để học trong nguồn này.`);
+function showPanel(p) {
+  $('#study-setup').hidden = p !== 'setup'; $('#study-play').hidden = p !== 'play'; $('#study-result').hidden = p !== 'result';
+  document.body.classList.toggle('playing', p === 'play'); if (p !== 'play') hideSheet();
+}
+// ===== Chọn thư viện: một nút, mở hộp thoại 3 tab (Bản thân, Cộng đồng, Hệ thống) =====
+const TAB_LABEL = { mine: 'Bản thân', community: 'Cộng đồng', system: 'Hệ thống' };
+const TAB_EMPTY = { mine: 'Bạn chưa có thư viện nào. Hãy tạo thư viện ở mục Của tôi.', community: 'Chưa có thư viện công khai nào từ người dùng khác.', system: 'Chưa có thư viện hệ thống nào được công khai.' };
+let chosen = null, pickTab = 'mine', pickSeq = 0;
+function syncChosen() {
+  const c = chosen, box = $('#st-chosen');
+  $('#st-lib').value = c ? c.id : ''; if (c) $('#st-src').value = c.src;
+  box.hidden = !c;
+  if (c) { $('#st-chosen-title').textContent = c.title; $('#st-chosen-meta').textContent = `${c.n} mục · ${TAB_LABEL[c.src] || ''}`; }
+}
+async function loadChosen(id, src) {
+  const { data, error } = await sb.from('libraries').select('id,title,items:library_items(count)').eq('id', id).maybeSingle();
+  const n = data && data.items && data.items[0] ? data.items[0].count : 0;
+  chosen = !error && data && n >= MIN_ITEMS ? { id: data.id, title: data.title, n, src: src || 'mine' } : null;
+  syncChosen();
+}
+function openPicker() { pickTab = $('#st-src').value || 'mine'; $('#lib-dlg').showModal(); renderPicker(); }
+async function renderPicker() {
+  document.querySelectorAll('#lib-tabs .tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.src === pickTab)));
+  const my = ++pickSeq, st = $('#lib-state'), grid = $('#lib-grid');
+  grid.replaceChildren(); st.hidden = false; st.className = 'state'; st.textContent = 'Đang tải…';
+  const rows = await fetchLibs(pickTab, '', '');
+  if (my !== pickSeq) return;
+  if (!rows) { st.className = 'state bad'; st.textContent = 'Không tải được danh sách thư viện. '; st.append(btn('Thử lại', renderPicker)); return; }
+  if (!rows.length) { st.textContent = TAB_EMPTY[pickTab]; return; }
+  st.hidden = true;
+  rows.forEach((l) => {
+    const sel = !!chosen && chosen.id === l.id, draft = l.n < MIN_ITEMS, c = el('button', null, 'libcard' + (sel ? ' sel' : ''));
+    c.type = 'button'; c.disabled = draft; c.setAttribute('aria-pressed', String(sel));
+    const m = el('span', null, 'lc-meta'); addMeta(m, `${l.n} mục`); if (draft) addMeta(m, `Bản nháp, cần tối thiểu ${MIN_ITEMS} mục`); (l.tags || []).forEach((t) => addMeta(m, tagChip(t)));
+    c.append(el('b', l.title, 'lc-title'), el('span', l.description || 'Chưa có mô tả.', 'lc-desc'), m);
+    if (sel) c.insertAdjacentHTML('beforeend', `<span class="lc-check">${icon('check')}</span>`);
+    c.addEventListener('click', () => { chosen = { id: l.id, title: l.title, n: l.n, src: pickTab }; syncChosen(); say($('#st-msg'), ''); $('#lib-dlg').close(); });
+    grid.append(c);
+  });
 }
 async function renderStudy() {
   if (G && !G.over) return showPanel('play');
   showPanel('setup'); say($('#st-msg'), ''); applyPrefs();
   if (!canSpeak) { const i = document.querySelector('#st-types input[value=listen]'); i.checked = false; i.disabled = true; i.parentNode.title = 'Trình duyệt này chưa hỗ trợ giọng đọc'; }
-  if (studyFrom) { $('#st-src').value = studyFrom.src; prefLib = null; await loadStudyLibs(); $('#st-lib').value = studyFrom.id; studyFrom = null; }
-  else await loadStudyLibs();
+  if (studyFrom) { const f = studyFrom; studyFrom = null; prefLib = null; await loadChosen(f.id, f.src); }
+  else if (!chosen && prefLib) { const id = prefLib; prefLib = null; await loadChosen(id, $('#st-src').value); }
+  else syncChosen();
 }
 function onModeChange() {
   const speed = $('#st-mode').value === 'speed', n = $('#st-num');
@@ -588,7 +640,7 @@ async function startGame(e) {
   e.preventDefault();
   const out = $('#st-msg'), libId = $('#st-lib').value, mode = $('#st-mode').value, num = parseInt($('#st-num').value, 10);
   const types = [...document.querySelectorAll('#st-types input:checked')].map((i) => i.value).filter((t) => t !== 'listen' || canSpeak);
-  if (!libId) return say(out, 'Hãy chọn nguồn và thư viện cụ thể.');
+  if (!libId) return say(out, 'Hãy bấm “Chọn thư viện” để chọn nội dung học.');
   if (!types.length) return say(out, 'Hãy chọn ít nhất một dạng câu hỏi.');
   const lo = mode === 'speed' ? 10 : 1, hi = mode === 'speed' ? 3600 : 100;
   if (!(num >= lo && num <= hi)) return say(out, mode === 'speed' ? 'Thời gian từ 10 đến 3600 giây.' : 'Số câu từ 1 đến 100.');
@@ -656,7 +708,7 @@ function build(t, it) {
 }
 function nextQuestion() {
   if (!G || G.over) return;
-  clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
+  clearTimeout(G.auto); hideSheet(); if (canSpeak) speechSynthesis.cancel();
   if (G.mode === 'classic' && G.done >= G.limit) return finishGame();
   let it = null, q = null;
   for (let k = 0; k < 8 && !q; k++) {
@@ -672,19 +724,30 @@ function nextQuestion() {
 function record(q, it, answer, extra = {}) {
   G.pending.push(sb.from('study_attempts').insert({ session_id: G.sid, item_id: it.id, qtype: q.t, direction: G.dir, answer: answer == null ? null : String(answer).slice(0, 400), ...extra }).then((r) => { if (r.error) { G.failed = true; G.err = G.err || r.error; } }));
 }
+function hideSheet() { const s = $('#g-sheet'); if (s) s.hidden = true; }
+// Phản hồi sau khi trả lời: khung cố định sát đáy màn hình, không làm trang dài thêm, nút tiếp theo luôn trong tầm nhìn.
+function showSheet(kind, title, detail, last) {
+  const it = G.q.item, s = $('#g-sheet'), d = kind === 'bad' ? String(detail || '').replace(/^Chưa đúng\.\s*/, '') : '';
+  s.className = 'sheet ' + kind; $('#sh-title').textContent = title;
+  $('#sh-ic').innerHTML = icon(kind === 'ok' ? 'check' : kind === 'bad' ? 'x' : 'book');
+  $('#sh-detail').textContent = d; $('#sh-detail').hidden = !d;
+  const first = (variants(it.term)[0] || '').toLowerCase();
+  $('#sh-word').textContent = `${showV(it.term)} — ${showV(it.meaning)}`; $('#sh-word').hidden = !!d && d.toLowerCase().includes(first);
+  $('#sh-speak').hidden = !canSpeak;
+  const nx = $('#g-next'); setBtn(nx, last ? 'Xem kết quả' : 'Câu tiếp');
+  s.hidden = false; nx.focus({ preventScroll: true });
+}
 function settle(ok, msg) {
   G.done++; if (ok) G.correct++;
-  const fb = $('#g-fb'); fb.textContent = msg; fb.className = 'msg' + (ok ? ' ok' : '');
   tick();
-  if (G.mode === 'speed') G.auto = setTimeout(nextQuestion, ok ? 600 : 1500);
-  else { setBtn($('#g-next'), G.done >= G.limit ? 'Xem kết quả' : 'Câu tiếp'); $('#g-next').hidden = false; $('#g-next').focus(); }
+  if (G.mode === 'speed') { const fb = $('#g-fb'); fb.textContent = msg; fb.className = 'msg' + (ok ? ' ok' : ''); G.auto = setTimeout(nextQuestion, ok ? 600 : 1500); }
+  else showSheet(ok ? 'ok' : 'bad', ok ? 'Chính xác!' : 'Chưa chính xác', msg, G.done >= G.limit);
 }
 function settleFlash(ok, it) {
   G.flash++; if (!ok) G.missed.add(it.id); if (G.flashOnly) G.done++;
-  const fb = $('#g-fb'); fb.textContent = ok ? 'Đã nhớ (flashcard không tính điểm).' : 'Sẽ ôn lại từ này (flashcard không tính điểm).'; fb.className = 'msg' + (ok ? ' ok' : '');
   tick();
-  if (G.mode === 'speed') G.auto = setTimeout(nextQuestion, 500);
-  else { setBtn($('#g-next'), G.flashOnly && G.done >= G.limit ? 'Xem kết quả' : 'Câu tiếp'); $('#g-next').hidden = false; $('#g-next').focus(); }
+  if (G.mode === 'speed') { const fb = $('#g-fb'); fb.textContent = ok ? 'Đã nhớ (không tính điểm).' : 'Sẽ ôn lại từ này (không tính điểm).'; fb.className = 'msg' + (ok ? ' ok' : ''); G.auto = setTimeout(nextQuestion, 500); }
+  else showSheet(ok ? 'ok' : 'info', ok ? 'Đã nhớ · không tính điểm' : 'Sẽ ôn lại từ này · không tính điểm', '', G.flashOnly && G.done >= G.limit);
 }
 
 // Nút trong khung kích thước cố định: chữ dài tự thu nhỏ (xem fit()).
@@ -699,11 +762,12 @@ function engInput(strict) {
   inp.setAttribute('autocorrect', 'off'); inp.setAttribute('aria-label', 'Câu trả lời');
   inp.addEventListener('input', (ev) => { if (!ev.isComposing) clamp(); });
   inp.addEventListener('compositionend', clamp);
+  inp.addEventListener('focus', () => setTimeout(() => inp.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350));
   return inp;
 }
 function askText(q, body, wrongMsg, focus = true) {
   const it = q.item, inp = engInput(AV(it).every(isAscii));
-  const go = btn('Kiểm tra', () => {
+  const go = btn('Gửi đáp án', () => {
     const v = inp.value; if (!clean(v)) return inp.focus();
     inp.disabled = true; go.disabled = true;
     const ok = isAns(it, v); record(q, it, v); settle(ok, ok ? 'Đúng!' : wrongMsg);
@@ -721,12 +785,16 @@ function rFlash(q, body, it) {
 }
 function rMcq(q, body, it) {
   const grid = el('div', null, 'opts'); body.append(grid);
-  q.options.forEach((o) => grid.append(optBtn(o, (ev) => {
-    const ok = isAns(it, o);
-    grid.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (isAns(it, x.dataset.v)) x.classList.add('ok'); });
-    if (!ok) ev.currentTarget.classList.add('bad');
-    record(q, it, o); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + A(it));
-  })));
+  q.options.forEach((o, i) => {
+    const b = optBtn(o, (ev) => {
+      if (grid.querySelector('.opt:disabled')) return; // chỉ gửi một lần
+      const ok = isAns(it, o);
+      grid.querySelectorAll('.opt').forEach((x) => { x.disabled = true; if (isAns(it, x.dataset.v)) x.classList.add('ok'); });
+      if (!ok) ev.currentTarget.classList.add('bad');
+      record(q, it, o); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + A(it));
+    });
+    b.prepend(el('b', 'ABCD'[i], 'key')); grid.append(b);
+  });
 }
 function rType(q, body, it) {
   if (AV(it).length > 1) body.append(el('p', 'Có nhiều đáp án đồng nghĩa, chỉ cần nhập một trong số đó.', 'muted hint'));
@@ -759,7 +827,7 @@ function rMatch(q, body) {
 }
 function rFill(q, body, it) {
   const wrap = el('div', null, 'cells'), inputs = [];
-  const go = btn('Kiểm tra', () => {
+  const go = btn('Gửi đáp án', () => {
     const vals = inputs.map((i) => i.value);
     if (vals.some((v) => !v)) return inputs[vals.findIndex((v) => !v)].focus();
     const word = q.chars.map((c, i) => (q.blanks.includes(i) ? vals[q.blanks.indexOf(i)] : c)).join('');
@@ -767,9 +835,10 @@ function rFill(q, body, it) {
     inputs.forEach((inp, k) => inp.classList.add(norm(inp.value) === norm(q.chars[q.blanks[k]]) ? 'ok' : 'bad'));
     const ok = isAns(it, word); record(q, it, word); settle(ok, ok ? 'Đúng!' : 'Chưa đúng. Đáp án: ' + q.word);
   }, 'btn');
+  let grp = el('span', null, 'wgrp'); wrap.append(grp);
   q.chars.forEach((c, i) => {
-    if (c === ' ') return wrap.append(el('span', null, 'cell gap'));
-    if (!q.blanks.includes(i)) return wrap.append(el('span', c, 'cell'));
+    if (c === ' ') { grp = el('span', null, 'wgrp'); wrap.append(grp); return; }
+    if (!q.blanks.includes(i)) return grp.append(el('span', c, 'cell'));
     const inp = el('input', null, 'cell'), ascii = /^[\x21-\x7E]$/.test(c);
     inp.autocomplete = 'off'; inp.autocapitalize = 'none'; inp.spellcheck = false; inp.lang = 'en';
     inp.setAttribute('autocorrect', 'off'); inp.setAttribute('aria-label', `Ký tự thiếu thứ ${q.blanks.indexOf(i) + 1}`);
@@ -782,13 +851,13 @@ function rFill(q, body, it) {
       if (ev.key === 'Enter') { ev.preventDefault(); go.click(); }
       else if (ev.key === 'Backspace' && !inp.value) { const pv = inputs[inputs.indexOf(inp) - 1]; if (pv) { ev.preventDefault(); pv.focus(); } }
     });
-    inputs.push(inp); wrap.append(inp);
+    inputs.push(inp); grp.append(inp);
   });
   body.append(wrap, go); inputs[0].focus();
 }
 function rOrder(q, body, it) {
   const slots = el('div', null, 'slots'), bank = el('div', null, 'bank'), placed = []; let locked = false;
-  const go = btn('Kiểm tra', () => {
+  const go = btn('Gửi đáp án', () => {
     locked = true; const ans = placed.map((t) => t.text).join(q.words ? ' ' : ''), ok = isAns(it, ans);
     body.querySelectorAll('button').forEach((b) => { b.disabled = true; });
     slots.querySelectorAll('.opt').forEach((b) => b.classList.add(ok ? 'ok' : 'bad'));
@@ -808,7 +877,7 @@ function rOrder(q, body, it) {
 }
 function rCount(q, body, it) {
   const row = el('div', null, 'chars'), pad = el('div', null, 'keypad');
-  [...q.shown].forEach((c) => row.append(c === ' ' ? el('span', null, 'ch gap') : el('span', c.toUpperCase(), 'ch')));
+  q.shown.split(' ').filter(Boolean).forEach((w) => { const g = el('span', null, 'wgrp'); [...w].forEach((c) => g.append(el('span', c.toUpperCase(), 'ch'))); row.append(g); });
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', ''].forEach((k) => {
     if (!k) return pad.append(el('span'));
     pad.append(optBtn(k, (ev) => {
@@ -830,17 +899,17 @@ function rListen(q, body, it) {
 const RENDER = { flashcard: rFlash, mcq: rMcq, type: rType, match: rMatch, fill: rFill, order: rOrder, count: rCount, listen: rListen };
 function renderQ(q) {
   const body = $('#g-body'), it = q.item; body.replaceChildren();
-  const fb = $('#g-fb'); fb.textContent = ''; fb.className = 'msg'; $('#g-next').hidden = true;
+  const fb = $('#g-fb'); fb.textContent = ''; fb.className = 'msg';
   const dir = q.t === 'listen' ? 'Nghe → Anh' : G.dir === 'en_vi' ? 'Anh → Việt' : 'Việt → Anh';
   $('#g-type').textContent = TYPE_LABEL[q.t] + (q.t === 'flashcard' ? ' (không tính điểm)' : '') + ' · ' + dir;
   $('#g-prompt').textContent = q.t === 'match' ? 'Ghép mỗi mục với nghĩa tương ứng' : q.t === 'listen' ? 'Bạn nghe được từ gì?' : P(it);
   $('#g-sub').textContent = SUB[q.t] || '';
   $('#g-speak').hidden = !(canSpeak && G.dir === 'en_vi' && (q.t === 'flashcard' || q.t === 'mcq'));
-  RENDER[q.t](q, body, it); scheduleFit();
+  RENDER[q.t](q, body, it); sizeGrid(); scheduleFit();
 }
 async function finishGame() {
   if (!G || G.over) return;
-  G.over = true; clearInterval(G.timer); clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
+  G.over = true; hideSheet(); clearInterval(G.timer); clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
   const g = G; showPanel('result'); $('#res-stats').replaceChildren(); $('#res-weak').replaceChildren(); say($('#res-note'), 'Đang lưu kết quả…', true);
   await Promise.all(g.pending);
   await sb.rpc('finish_study_session', { sid: g.sid });
@@ -1069,10 +1138,15 @@ async function init() {
   let bt; $('#browse-q').addEventListener('input', () => { clearTimeout(bt); bt = setTimeout(renderLibraries, 300); });
   $('#browse-tag').addEventListener('change', renderLibraries);
   $('#study-setup').addEventListener('submit', startGame);
-  $('#st-src').addEventListener('change', loadStudyLibs);
+  $('#st-pick').addEventListener('click', openPicker);
+  document.querySelectorAll('#lib-tabs .tab').forEach((t) => t.addEventListener('click', () => { pickTab = t.dataset.src; renderPicker(); }));
+  $('#lib-dlg-x').addEventListener('click', () => $('#lib-dlg').close());
+  $('#lib-dlg').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+  $('#lib-dlg-x').innerHTML = icon('x'); $('#g-quit').innerHTML = icon('x'); $('#sh-speak').innerHTML = icon('volume');
+  $('#sh-speak').addEventListener('click', () => { if (G && G.q) speak(G.q.item.tv[0]); });
   $('#st-mode').addEventListener('change', onModeChange);
   $('#g-next').addEventListener('click', nextQuestion);
-  $('#g-quit').addEventListener('click', finishGame);
+  $('#g-quit').addEventListener('click', async () => { if (await askConfirm('Kết thúc phiên học và xem kết quả?')) finishGame(); });
   $('#g-speak').addEventListener('click', () => { if (G && G.q) speak(G.q.item.tv[0]); });
   $('#report-form').addEventListener('submit', onReport);
   $('#browse-sort').addEventListener('change', renderLibraries);
@@ -1085,8 +1159,10 @@ async function init() {
   $('#res-again').addEventListener('click', () => { G = null; renderStudy(); });
   // Bàn phím số vật lý cho câu "Đếm ký tự thay thế"
   document.addEventListener('keydown', (e) => {
-    if (!G || G.over || !G.q || G.q.t !== 'count' || $('#study-play').hidden || e.target.closest('input,textarea')) return;
-    const b = $('#g-body').querySelector(`.keypad .opt[data-v="${e.key}"]`); if (b && !b.disabled) b.click();
+    if (!G || G.over || !G.q || $('#study-play').hidden || e.target.closest('input,textarea') || e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+    const body = $('#g-body');
+    if (G.q.t === 'count') { const b = body.querySelector(`.keypad .opt[data-v="${e.key}"]`); if (b && !b.disabled) b.click(); }
+    else if (G.q.t === 'mcq') { const i = '1234'.includes(e.key) ? '1234'.indexOf(e.key) : 'abcd'.indexOf(e.key.toLowerCase()), b = body.querySelectorAll('.opts .opt')[i]; if (i >= 0 && b && !b.disabled) b.click(); }
   });
   // Vừa khung: tính lại khi nội dung, khu vực hiển thị hoặc kích thước màn hình đổi
   new MutationObserver(scheduleFit).observe($('main'), { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });

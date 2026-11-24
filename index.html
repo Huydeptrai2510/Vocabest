@@ -158,8 +158,9 @@
       <div class="setup">
         <div class="card frame">
           <h3>Thư viện</h3>
-          <label>Nguồn<select id="st-src"><option value="mine">Bản thân</option><option value="system">Hệ thống</option><option value="community">Cộng đồng</option></select></label>
-          <label>Thư viện<select id="st-lib"></select></label>
+          <button class="btn big full" id="st-pick" type="button">Chọn thư viện</button>
+          <div id="st-chosen" class="chosen" hidden><b id="st-chosen-title"></b><small id="st-chosen-meta"></small></div>
+          <input type="hidden" id="st-src" value="mine"><input type="hidden" id="st-lib" value="">
         </div>
         <div class="card frame">
           <h3>Chế độ</h3>
@@ -184,14 +185,13 @@
       <p class="msg" id="st-msg" role="alert"></p>
       <div class="startbar"><button class="btn big" type="submit">Bắt đầu</button></div>
     </form>
-    <div id="study-play" class="card" hidden>
-      <div class="gbar"><span id="g-info"></span><span id="g-score"></span><button class="btn small ghost" id="g-quit" type="button">Kết thúc</button></div>
-      <div class="track"><div id="g-fill"></div></div>
-      <p id="g-type" class="muted"></p>
+    <div id="study-play" class="card play" hidden>
+      <div class="gbar"><button class="iconbtn sm" id="g-quit" type="button" aria-label="Kết thúc phiên học"></button><div class="track"><div id="g-fill"></div></div><span id="g-score"></span></div>
+      <div class="ginfo"><span id="g-info"></span><span id="g-type"></span></div>
       <div class="promptrow"><h3 id="g-prompt"></h3><button class="iconbtn" id="g-speak" type="button" aria-label="Nghe phát âm" hidden></button></div>
       <p id="g-sub" class="muted"></p>
       <div id="g-body"></div>
-      <p id="g-fb" class="msg" role="status"></p><p><button class="btn" id="g-next" type="button" hidden>Câu tiếp</button></p>
+      <p id="g-fb" class="msg" role="status"></p>
     </div>
     <div id="study-result" class="card" hidden>
       <h3>Kết quả</h3><div id="res-stats" class="res"></div>
@@ -267,6 +267,25 @@
     <p><button class="btn ghost" id="logout-btn" type="button">Đăng xuất</button></p>
   </section>
 </main>
+<div id="g-sheet" class="sheet" hidden role="status" aria-live="polite">
+  <div class="sheet-in">
+    <div class="sh-head"><span class="sh-ic" id="sh-ic"></span><b id="sh-title"></b><button class="iconbtn sm" id="sh-speak" type="button" aria-label="Nghe phát âm" hidden></button></div>
+    <p class="sh-detail" id="sh-detail" hidden></p>
+    <p class="sh-word" id="sh-word"></p>
+    <button class="btn big" id="g-next" type="button">Câu tiếp</button>
+  </div>
+</div>
+<dialog id="lib-dlg" aria-labelledby="lib-dlg-title">
+  <div class="dlg-in">
+    <div class="dlg-head"><h3 id="lib-dlg-title">Chọn thư viện</h3><button class="iconbtn sm" id="lib-dlg-x" type="button" aria-label="Đóng"></button></div>
+    <div class="seg" id="lib-tabs" role="tablist">
+      <button class="tab" type="button" role="tab" data-src="mine">Bản thân</button>
+      <button class="tab" type="button" role="tab" data-src="community">Cộng đồng</button>
+      <button class="tab" type="button" role="tab" data-src="system">Hệ thống</button>
+    </div>
+    <div class="dlg-body"><p id="lib-state" class="state" role="status"></p><div id="lib-grid" class="libgrid"></div></div>
+  </div>
+</dialog>
 <dialog id="confirm-dlg"><form method="dialog"><p id="confirm-text"></p><div class="row"><button class="btn ghost" value="no">Hủy</button><button class="btn" value="yes">Xác nhận</button></div></form></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 </body>

@@ -195,6 +195,75 @@ input.cell{width:42px;border-color:var(--orange);background:var(--paper);font-si
 }
 @media(max-width:480px){
   .pairs{gap:8px}.pairs .col{grid-template-rows:repeat(4,60px);gap:8px}.pairs .opt{padding:6px 10px}
-  .cell,input.cell{width:36px;height:46px}.ch{width:38px;height:48px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== v2: học tập gọn trong một màn hình ===== */
+.btn.full{width:100%}
+.iconbtn.sm{width:36px;height:36px}.iconbtn.sm .ic{width:18px;height:18px}
+.chosen{margin-top:10px;padding:10px 12px;border:2px solid var(--yellow);border-radius:12px;background:var(--paper)}
+.chosen b{display:block;line-height:1.3;overflow-wrap:anywhere}
+/* Màn chơi */
+body.playing [data-view=study]>h2{display:none}
+#study-play{padding:14px 16px 16px;margin-bottom:0}
+.gbar{display:flex;align-items:center;flex-wrap:nowrap;gap:10px;margin:0 0 6px}
+.track{flex:1;height:10px}
+#g-fill{border-radius:99px;transition:width .25s ease}
+#g-score{font-size:.85rem;font-weight:700;white-space:nowrap;color:var(--muted)}
+.ginfo{display:flex;justify-content:space-between;gap:8px;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:2px}
+#g-info{white-space:nowrap}
+#g-type{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right}
+#g-prompt{height:clamp(44px,8vh,76px);margin:4px 0;font-size:clamp(1.15rem,4.6vw,1.55rem)}
+#g-sub{margin:0 0 8px;font-size:.85rem}
+#g-body{gap:10px;--cs:34px;--g:3px}
+#g-fb{margin:0}
+.opt{height:58px}
+.opts{gap:8px}
+.key{flex:none;width:26px;height:26px;margin-right:10px;border-radius:8px;border:2px solid var(--line);background:var(--paper);color:var(--deep);display:grid;place-items:center;font-size:.8rem;font-weight:800}
+.opt.ok .key{background:var(--ok);border-color:var(--ok);color:#fff}.opt.bad .key{background:var(--bad);border-color:var(--bad);color:#fff}
+.keypad{gap:8px}.keypad .opt{height:clamp(46px,7vh,56px)}
+/* Ô ký tự dùng chung (điền chỗ trống, đếm ký tự, sắp xếp): cùng cỡ, cùng font, cỡ do JS chọn theo bề rộng */
+.wgrp{display:inline-flex;flex-wrap:nowrap;gap:var(--g)}
+.cells,.chars{display:flex;flex-wrap:wrap;justify-content:center;gap:calc(var(--cs)*.3) calc(var(--cs)*.45)}
+.cell,.ch,input.cell,.tilebtn:not(.word){width:var(--cs);height:calc(var(--cs)*1.25);border-radius:calc(var(--cs)*.24)}
+.cell,.ch,input.cell,.tilebtn{padding:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-weight:800;font-size:calc(var(--cs)*.58);line-height:1}
+.ch,.cell{border-width:2px}
+.tilebtn.word{width:auto;height:calc(var(--cs)*1.2);min-width:calc(var(--cs)*1.6);padding:0 calc(var(--cs)*.4);border-radius:calc(var(--cs)*.24)}
+.slots,.bank{gap:6px}
+.slots{min-height:calc(var(--cs)*1.25 + 20px);padding:8px}
+.slot-empty{width:var(--cs);height:calc(var(--cs)*1.25);border-radius:0}
+/* Khung phản hồi cố định sát đáy */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:35;display:flex;justify-content:center;pointer-events:none}
+.sheet-in{pointer-events:auto;width:min(100%,820px);display:grid;gap:8px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:#fff;border-top:4px solid var(--line);border-radius:20px 20px 0 0;box-shadow:0 -8px 28px rgba(43,33,24,.14)}
+.sheet.ok .sheet-in{background:#eaf7ef;border-top-color:var(--ok)}
+.sheet.bad .sheet-in{background:#fdeceb;border-top-color:var(--bad)}
+.sheet.info .sheet-in{background:var(--paper);border-top-color:var(--yellow)}
+.sh-head{display:flex;align-items:center;gap:10px;font-size:1.1rem}.sh-head b{flex:1;min-width:0}
+.sh-ic{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:50%;color:#fff}
+.sheet.ok .sh-ic{background:var(--ok)}.sheet.bad .sh-ic{background:var(--bad)}.sheet.info .sh-ic{background:var(--orange)}
+.sheet.ok .sh-head b{color:var(--ok)}.sheet.bad .sh-head b{color:var(--bad)}
+.sh-detail,.sh-word{margin:0;line-height:1.35;overflow-wrap:anywhere}
+.sh-detail{font-weight:700}.sh-word{color:var(--muted);font-size:.95rem}
+.sheet .btn{width:100%}
+.sheet.ok .btn{background:var(--ok);border-color:var(--ok)}.sheet.bad .btn{background:var(--bad);border-color:var(--bad)}
+@media(prefers-reduced-motion:no-preference){.sheet:not([hidden]) .sheet-in{animation:sup .18s ease-out}@keyframes sup{from{transform:translateY(100%)}}}
+/* Hộp thoại chọn thư viện */
+#lib-dlg{padding:0;width:min(94vw,600px);max-width:none;max-height:calc(100vh - 32px);max-height:calc(100dvh - 32px);overflow:hidden}
+#lib-dlg[open]{display:flex;flex-direction:column}
+.dlg-in{display:flex;flex-direction:column;flex:1;min-height:0;max-height:inherit}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 16px 8px}.dlg-head h3{margin:0}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px 10px}
+.seg .tab{padding:8px 4px;text-align:center}
+.dlg-body{flex:1;min-height:120px;overflow:auto;overscroll-behavior:contain;padding:4px 16px 16px}
+.libgrid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));grid-auto-rows:1fr}
+.libcard{position:relative;display:flex;flex-direction:column;gap:4px;min-height:96px;padding:12px 14px;text-align:left;font:inherit;color:var(--ink);background:#fff;border:2px solid var(--line);border-left:6px solid var(--yellow);border-radius:12px;cursor:pointer}
+.libcard:hover:not(:disabled){border-color:var(--orange)}.libcard:active:not(:disabled){transform:scale(.98)}
+.libcard.sel{background:var(--paper);border-color:var(--orange)}.libcard:disabled{opacity:.55;cursor:not-allowed}
+.lc-title,.lc-desc{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.lc-title{-webkit-line-clamp:2;line-height:1.3;padding-right:22px}
+.lc-desc{-webkit-line-clamp:2;font-size:.85rem;color:var(--muted)}
+.lc-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:auto;font-size:.8rem;color:var(--muted)}
+.lc-check{position:absolute;top:10px;right:10px;color:var(--orange)}
+.state{margin:8px 0;padding:16px 0;text-align:center;font-weight:600;color:var(--muted)}.state.bad{color:var(--bad)}
+@media(max-width:720px){body.playing nav{display:none}body.playing{padding-bottom:16px}}
+@media(max-width:560px){#study-play{padding:12px 14px 14px}}
