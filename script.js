@@ -1138,6 +1138,7 @@ async function init() {
   let bt; $('#browse-q').addEventListener('input', () => { clearTimeout(bt); bt = setTimeout(renderLibraries, 300); });
   $('#browse-tag').addEventListener('change', renderLibraries);
   $('#study-setup').addEventListener('submit', startGame);
+  $('#st-pick-ic').innerHTML = icon('book');
   $('#st-pick').addEventListener('click', openPicker);
   document.querySelectorAll('#lib-tabs .tab').forEach((t) => t.addEventListener('click', () => { pickTab = t.dataset.src; renderPicker(); }));
   $('#lib-dlg-x').addEventListener('click', () => $('#lib-dlg').close());

@@ -158,14 +158,16 @@
       <div class="setup">
         <div class="card frame">
           <h3>Thư viện</h3>
-          <button class="btn big full" id="st-pick" type="button">Chọn thư viện</button>
+          <button class="pickbtn" id="st-pick" type="button"><span class="pk-ic" id="st-pick-ic"></span><span class="pk-t">Chọn thư viện</span><span class="pk-go" aria-hidden="true">›</span></button>
           <div id="st-chosen" class="chosen" hidden><b id="st-chosen-title"></b><small id="st-chosen-meta"></small></div>
           <input type="hidden" id="st-src" value="mine"><input type="hidden" id="st-lib" value="">
         </div>
         <div class="card frame">
           <h3>Chế độ</h3>
+          <div class="pair">
           <label>Kiểu chơi<select id="st-mode"><option value="classic">Classic: theo số câu</option><option value="speed">Speed: theo thời gian</option></select></label>
           <label><span id="st-num-label">Số câu</span><input id="st-num" type="number" min="1" max="100" value="10" inputmode="numeric"></label>
+          </div>
         </div>
         <div class="card frame wide-frame">
           <h3>Dạng câu hỏi</h3>
@@ -179,11 +181,11 @@
             <label><input type="checkbox" value="count" checked>Đếm ký tự thay thế</label>
             <label><input type="checkbox" value="listen" checked>Nghe và nhập</label>
           </fieldset>
-          <p class="muted hint">Trắc nghiệm, ghép cặp và flashcard chọn ngẫu nhiên chiều Anh → Việt hoặc Việt → Anh. Nhập đáp án, điền chỗ trống, sắp xếp, đếm ký tự và nghe đều hỏi bằng tiếng Việt (hoặc âm thanh) và trả lời bằng tiếng Anh. Flashcard chỉ để tự ôn: không tính điểm và không tính vào số câu (trừ khi bạn chỉ chọn Flashcard).</p>
+          <details class="howto"><summary>Cách hoạt động của từng dạng</summary>          <p class="muted hint">Trắc nghiệm, ghép cặp và flashcard chọn ngẫu nhiên chiều Anh → Việt hoặc Việt → Anh. Nhập đáp án, điền chỗ trống, sắp xếp, đếm ký tự và nghe đều hỏi bằng tiếng Việt (hoặc âm thanh) và trả lời bằng tiếng Anh. Flashcard chỉ để tự ôn: không tính điểm và không tính vào số câu (trừ khi bạn chỉ chọn Flashcard).</p></details>
         </div>
       </div>
       <p class="msg" id="st-msg" role="alert"></p>
-      <div class="startbar"><button class="btn big" type="submit">Bắt đầu</button></div>
+      <div class="startbar"><button class="btn" type="submit">Bắt đầu</button></div>
     </form>
     <div id="study-play" class="card play" hidden>
       <div class="gbar"><button class="iconbtn sm" id="g-quit" type="button" aria-label="Kết thúc phiên học"></button><div class="track"><div id="g-fill"></div></div><span id="g-score"></span></div>
