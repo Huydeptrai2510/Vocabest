@@ -168,6 +168,7 @@
           <label>Kiểu chơi<select id="st-mode"><option value="classic">Classic: theo số câu</option><option value="speed">Speed: theo thời gian</option></select></label>
           <label><span id="st-num-label">Số câu</span><input id="st-num" type="number" min="1" max="100" value="10" inputmode="numeric"></label>
           </div>
+          <label class="sfxrow"><input type="checkbox" id="st-sfx" checked>Âm thanh hiệu ứng (đúng, sai, hoàn thành…)</label>
         </div>
         <div class="card frame wide-frame">
           <h3>Dạng câu hỏi</h3>
@@ -278,7 +279,7 @@
   </div>
 </div>
 <dialog id="lib-dlg" aria-labelledby="lib-dlg-title">
-  <div class="dlg-in">
+  <div class="dlg-in" tabindex="-1">
     <div class="dlg-head"><h3 id="lib-dlg-title">Chọn thư viện</h3><button class="iconbtn sm" id="lib-dlg-x" type="button" aria-label="Đóng"></button></div>
     <div class="seg" id="lib-tabs" role="tablist">
       <button class="tab" type="button" role="tab" data-src="mine">Bản thân</button>

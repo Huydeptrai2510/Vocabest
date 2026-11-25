@@ -132,6 +132,27 @@ function enhanceSelect(sel) {
 }
 
 // Vừa khung: chữ tràn khung thì tự thu nhỏ (khung phải có kích thước cố định, overflow ẩn).
+// ===== Âm thanh hiệu ứng: tổng hợp bằng Web Audio, không cần file. 5 âm: chạm, đúng, sai, hoàn thành, đếm ngược =====
+let actx = null;
+const sfxOn = () => { try { return localStorage.getItem('vb_sfx') !== '0'; } catch { return true; } };
+function audio() {
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch { actx = null; }
+  return actx;
+}
+function tone(freq, at, dur, type = 'sine', vol = 0.18) {
+  const c = actx, t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.03);
+}
+const SFX = {
+  tap: () => tone(660, 0, 0.06, 'triangle', 0.1),
+  correct: () => { tone(660, 0, 0.12); tone(880, 0.1, 0.2); },
+  wrong: () => { tone(220, 0, 0.16, 'sawtooth', 0.09); tone(165, 0.14, 0.26, 'sawtooth', 0.09); },
+  done: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.24)),
+  tick: () => tone(1000, 0, 0.05, 'square', 0.05),
+};
+function sfx(name) { if (!sfxOn() || !audio()) return; try { SFX[name](); } catch { /* bỏ qua lỗi âm thanh */ } }
 function fit(frame, min = 11) {
   if (!frame.clientHeight) return;
   const t = frame.querySelector('.fit') || frame;
@@ -157,11 +178,10 @@ function pickSize(words, W, g, wgFixed, cap) {
 }
 function sizeGrid() {
   const q = G && G.q, body = $('#g-body');
-  if (!q || !body || !body.clientWidth || !['fill', 'count', 'order'].includes(q.t)) return;
+  if (!q || !body || !body.clientWidth || !['fill', 'order'].includes(q.t)) return;
   const W = body.clientWidth - (q.t === 'order' ? 30 : 2), cap = W < 480 ? 36 : 44;
   let s;
-  if (q.t === 'count') s = pickSize(q.shown.split(' ').filter(Boolean).map((w) => [...w].length), W, 3, null, cap);
-  else if (q.t === 'fill') s = pickSize(q.chars.join('').split(' ').filter(Boolean).map((w) => [...w].length), W, 3, null, cap);
+  if (q.t === 'fill') s = pickSize(q.chars.join('').split(' ').filter(Boolean).map((w) => [...w].length), W, 3, null, cap);
   else s = q.words ? Math.min(cap, 34) : pickSize(q.tiles.map(() => 1), W, 0, 6, cap);
   body.style.setProperty('--cs', s + 'px');
 }
@@ -603,7 +623,7 @@ async function loadChosen(id, src) {
   chosen = !error && data && n >= MIN_ITEMS ? { id: data.id, title: data.title, n, src: src || 'mine' } : null;
   syncChosen();
 }
-function openPicker() { pickTab = $('#st-src').value || 'mine'; $('#lib-dlg').showModal(); renderPicker(); }
+function openPicker() { pickTab = $('#st-src').value || 'mine'; $('#lib-dlg').showModal(); $('#lib-dlg .dlg-in').focus({ preventScroll: true }); renderPicker(); }
 async function renderPicker() {
   document.querySelectorAll('#lib-tabs .tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.src === pickTab)));
   const my = ++pickSeq, st = $('#lib-state'), grid = $('#lib-grid');
@@ -637,6 +657,7 @@ function onModeChange() {
   n.min = speed ? 10 : 1; n.max = speed ? 3600 : 100; n.value = speed ? 60 : 10;
 }
 async function startGame(e) {
+  audio();
   e.preventDefault();
   const out = $('#st-msg'), libId = $('#st-lib').value, mode = $('#st-mode').value, num = parseInt($('#st-num').value, 10);
   const types = [...document.querySelectorAll('#st-types input:checked')].map((i) => i.value).filter((t) => t !== 'listen' || canSpeak);
@@ -660,6 +681,7 @@ function tick() {
   if (G.mode === 'speed') {
     const left = Math.max(0, G.limit - sec);
     $('#g-info').textContent = 'Còn ' + fmt(Math.ceil(left)); $('#g-fill').style.width = (100 * left / G.limit) + '%';
+    if (left > 0 && left <= 5 && G.lastTick !== Math.ceil(left)) { G.lastTick = Math.ceil(left); sfx('tick'); }
     if (left <= 0) finishGame();
   } else { $('#g-info').textContent = `Câu ${Math.min(G.done + 1, G.limit)}/${G.limit} — ${fmt(sec)}`; $('#g-fill').style.width = (100 * G.done / G.limit) + '%'; }
   $('#g-score').textContent = G.flashOnly ? `Thẻ đã xem: ${G.flash}` : `Đúng ${G.correct}/${G.done}`;
@@ -724,7 +746,7 @@ function nextQuestion() {
 function record(q, it, answer, extra = {}) {
   G.pending.push(sb.from('study_attempts').insert({ session_id: G.sid, item_id: it.id, qtype: q.t, direction: G.dir, answer: answer == null ? null : String(answer).slice(0, 400), ...extra }).then((r) => { if (r.error) { G.failed = true; G.err = G.err || r.error; } }));
 }
-function hideSheet() { const s = $('#g-sheet'); if (s) s.hidden = true; }
+function hideSheet() { const s = $('#g-sheet'); if (s) s.hidden = true; document.body.classList.remove('sheet-open'); }
 // Phản hồi sau khi trả lời: khung cố định sát đáy màn hình, không làm trang dài thêm, nút tiếp theo luôn trong tầm nhìn.
 function showSheet(kind, title, detail, last) {
   const it = G.q.item, s = $('#g-sheet'), d = kind === 'bad' ? String(detail || '').replace(/^Chưa đúng\.\s*/, '') : '';
@@ -735,16 +757,16 @@ function showSheet(kind, title, detail, last) {
   $('#sh-word').textContent = `${showV(it.term)} — ${showV(it.meaning)}`; $('#sh-word').hidden = !!d && d.toLowerCase().includes(first);
   $('#sh-speak').hidden = !canSpeak;
   const nx = $('#g-next'); setBtn(nx, last ? 'Xem kết quả' : 'Câu tiếp');
-  s.hidden = false; nx.focus({ preventScroll: true });
+  s.hidden = false; document.documentElement.style.setProperty('--sheet-h', s.offsetHeight + 'px'); document.body.classList.add('sheet-open'); nx.focus({ preventScroll: true });
 }
 function settle(ok, msg) {
-  G.done++; if (ok) G.correct++;
+  G.done++; if (ok) G.correct++; sfx(ok ? 'correct' : 'wrong');
   tick();
   if (G.mode === 'speed') { const fb = $('#g-fb'); fb.textContent = msg; fb.className = 'msg' + (ok ? ' ok' : ''); G.auto = setTimeout(nextQuestion, ok ? 600 : 1500); }
   else showSheet(ok ? 'ok' : 'bad', ok ? 'Chính xác!' : 'Chưa chính xác', msg, G.done >= G.limit);
 }
 function settleFlash(ok, it) {
-  G.flash++; if (!ok) G.missed.add(it.id); if (G.flashOnly) G.done++;
+  sfx('tap'); G.flash++; if (!ok) G.missed.add(it.id); if (G.flashOnly) G.done++;
   tick();
   if (G.mode === 'speed') { const fb = $('#g-fb'); fb.textContent = ok ? 'Đã nhớ (không tính điểm).' : 'Sẽ ôn lại từ này (không tính điểm).'; fb.className = 'msg' + (ok ? ' ok' : ''); G.auto = setTimeout(nextQuestion, 500); }
   else showSheet(ok ? 'ok' : 'info', ok ? 'Đã nhớ · không tính điểm' : 'Sẽ ôn lại từ này · không tính điểm', '', G.flashOnly && G.done >= G.limit);
@@ -876,8 +898,7 @@ function rOrder(q, body, it) {
   body.append(slots, bank, row); draw();
 }
 function rCount(q, body, it) {
-  const row = el('div', null, 'chars'), pad = el('div', null, 'keypad');
-  q.shown.split(' ').filter(Boolean).forEach((w) => { const g = el('span', null, 'wgrp'); [...w].forEach((c) => g.append(el('span', c.toUpperCase(), 'ch'))); row.append(g); });
+  const row = el('div', q.shown, 'cword fitbox'), pad = el('div', null, 'keypad');
   ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', ''].forEach((k) => {
     if (!k) return pad.append(el('span'));
     pad.append(optBtn(k, (ev) => {
@@ -909,7 +930,7 @@ function renderQ(q) {
 }
 async function finishGame() {
   if (!G || G.over) return;
-  G.over = true; hideSheet(); clearInterval(G.timer); clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
+  G.over = true; if (G.done > 0 || G.flash > 0) sfx('done'); hideSheet(); clearInterval(G.timer); clearTimeout(G.auto); if (canSpeak) speechSynthesis.cancel();
   const g = G; showPanel('result'); $('#res-stats').replaceChildren(); $('#res-weak').replaceChildren(); say($('#res-note'), 'Đang lưu kết quả…', true);
   await Promise.all(g.pending);
   await sb.rpc('finish_study_session', { sid: g.sid });
@@ -1139,6 +1160,11 @@ async function init() {
   $('#browse-tag').addEventListener('change', renderLibraries);
   $('#study-setup').addEventListener('submit', startGame);
   $('#st-pick-ic').innerHTML = icon('book');
+  document.addEventListener('click', audio, { once: true });
+  const sx = $('#st-sfx'); sx.checked = sfxOn();
+  sx.addEventListener('change', () => { try { localStorage.setItem('vb_sfx', sx.checked ? '1' : '0'); } catch { /* bỏ qua */ } if (sx.checked) sfx('correct'); });
+  $('#g-body').addEventListener('click', (e) => { if (e.target.closest('.tilebtn, .pairs .opt')) sfx('tap'); });
+  $('#g-next').addEventListener('click', () => sfx('tap'));
   $('#st-pick').addEventListener('click', openPicker);
   document.querySelectorAll('#lib-tabs .tab').forEach((t) => t.addEventListener('click', () => { pickTab = t.dataset.src; renderPicker(); }));
   $('#lib-dlg-x').addEventListener('click', () => $('#lib-dlg').close());
